@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Timecode — Timer Widget Builder for OBS &amp; vMix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="tally-strip" id="tallyStrip">
+      <div class="tally-lamp" data-field="d"><span class="dot"></span><span class="lamp-label">D</span></div>
+      <div class="tally-lamp" data-field="h"><span class="dot"></span><span class="lamp-label">H</span></div>
+      <div class="tally-lamp" data-field="m"><span class="dot"></span><span class="lamp-label">M</span></div>
+      <div class="tally-lamp" data-field="s"><span class="dot"></span><span class="lamp-label">S</span></div>
+    </div>
+    <div class="masthead-title">
+      <h1>TIMECODE</h1>
+      <p>Timer &amp; clock widget builder for OBS Studio, vMix, and any browser-source overlay</p>
+    </div>
+  </div>
+  <div class="rec-indicator"><span class="rec-dot"></span> LIVE PREVIEW</div>
+</header>
+
+<main class="console">
+
+  <!-- ============ CONTROL PANEL ============ -->
+  <section class="panel controls">
+
+    <div class="strip">
+      <h2 class="strip-title">01 — Mode</h2>
+      <label class="field">
+        <span>What is it counting?</span>
+        <select id="mode">
+          <option value="countdown-target">Countdown to a date &amp; time</option>
+          <option value="countdown-duration">Countdown timer (e.g. 10:00)</option>
+          <option value="countup">Count up / stopwatch</option>
+          <option value="clock">Live clock</option>
+        </select>
+      </label>
+
+      <div id="opts-target" class="mode-opts">
+        <label class="field">
+          <span>Target date &amp; time</span>
+          <input type="datetime-local" id="target">
+        </label>
+      </div>
+
+      <div id="opts-duration" class="mode-opts">
+        <label class="field">
+          <span>Starting duration</span>
+          <div class="inline-fields">
+            <input type="number" id="durHours" min="0" value="0" placeholder="HH">
+            <input type="number" id="durMinutes" min="0" max="59" value="10" placeholder="MM">
+            <input type="number" id="durSeconds" min="0" max="59" value="0" placeholder="SS">
+          </div>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="loop">
+          <span>Loop / restart automatically at zero</span>
+        </label>
+      </div>
+
+      <div id="opts-countup" class="mode-opts">
+        <label class="checkbox">
+          <input type="checkbox" id="countupFromNow" checked>
+          <span>Start counting the moment it loads on stream</span>
+        </label>
+        <label class="field" id="startAtWrap" style="display:none">
+          <span>Or start counting from</span>
+          <input type="datetime-local" id="startAt">
+        </label>
+      </div>
+
+      <div id="opts-endtext" class="mode-opts">
+        <label class="field">
+          <span>Text to show when it reaches zero</span>
+          <input type="text" id="endText" value="00:00:00" placeholder="e.g. STARTING NOW">
+        </label>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">02 — Fields</h2>
+      <p class="strip-hint">Pick exactly what shows on screen. This also lights up the tally strip above.</p>
+      <div class="field-toggles" id="fieldToggles">
+        <label class="chip"><input type="checkbox" value="d" checked><span>Days</span></label>
+        <label class="chip"><input type="checkbox" value="h" checked><span>Hours</span></label>
+        <label class="chip"><input type="checkbox" value="m" checked><span>Minutes</span></label>
+        <label class="chip"><input type="checkbox" value="s" checked><span>Seconds</span></label>
+        <label class="chip" id="chipDate"><input type="checkbox" value="date"><span>Date</span></label>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">03 — Format</h2>
+      <div class="grid-2">
+        <label class="checkbox">
+          <input type="checkbox" id="showLabels">
+          <span>Show unit labels (Days / Hours...)</span>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="zeroPad" checked>
+          <span>Zero-pad numbers (05 not 5)</span>
+        </label>
+      </div>
+      <div class="grid-2">
+        <label class="field">
+          <span>Separator</span>
+          <input type="text" id="sep" value=":" maxlength="3">
+        </label>
+        <label class="field">
+          <span>Timezone (optional)</span>
+          <input type="text" id="timezone" placeholder="e.g. Asia/Jakarta">
+        </label>
+      </div>
+      <label class="field" id="dateFormatWrap" style="display:none">
+        <span>Date format</span>
+        <select id="dateFormat">
+          <option value="DD MMM YYYY">05 Jul 2026</option>
+          <option value="DD/MM/YYYY">05/07/2026</option>
+          <option value="MM/DD/YYYY">07/05/2026</option>
+          <option value="YYYY-MM-DD">2026-07-05</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">04 — Style</h2>
+      <p class="strip-hint">12 ready-made looks. Pick one to skip styling entirely, or use it as a starting point below.</p>
+      <div class="template-gallery" id="templateGallery"></div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">05 — Custom CSS <span class="optional">optional</span></h2>
+      <p class="strip-hint">
+        Overrides the template above. Target: <code>.timer-wrap</code>, <code>.segment</code>,
+        <code>.value</code>, <code>.label</code>, <code>.sep</code>, <code>.date-line</code>, <code>.ended-text</code>.
+      </p>
+      <textarea id="customCss" rows="8" spellcheck="false" placeholder=".value {
+  color: #ffffff;
+  font-size: 120px;
+}"></textarea>
+    </div>
+
+  </section>
+
+  <!-- ============ PREVIEW / OUTPUT ============ -->
+  <aside class="panel output">
+    <div class="strip">
+      <h2 class="strip-title">Preview</h2>
+      <div class="preview-frame">
+        <iframe id="previewFrame" src="widget.html" title="Live preview"></iframe>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">Browser Source URL</h2>
+      <p class="strip-hint">Copy this into OBS's Browser Source, or vMix's Web Browser input.</p>
+      <div class="url-row">
+        <input type="text" id="outputUrl" readonly>
+        <button id="copyBtn" class="btn-primary">Copy link</button>
+      </div>
+      <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
+    </div>
+
+    <div class="strip howto">
+      <h2 class="strip-title">How to use it</h2>
+      <div class="howto-grid">
+        <div>
+          <h3>OBS Studio</h3>
+          <ol>
+            <li>Sources → + → Browser</li>
+            <li>Paste the URL above</li>
+            <li>Set Width/Height (e.g. 1920×1080)</li>
+            <li>Check "Shutdown source when not visible" off, so it keeps time</li>
+          </ol>
+        </div>
+        <div>
+          <h3>vMix</h3>
+          <ol>
+            <li>Add Input → Web Browser</li>
+            <li>Paste the URL above</li>
+            <li>Set the resolution to match your output</li>
+            <li>Overlay it on your program layer</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</main>
+
+<script src="js/templates.js"></script>
+<script src="js/timer-core.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
