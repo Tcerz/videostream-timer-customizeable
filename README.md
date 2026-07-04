@@ -12,16 +12,6 @@ Two pages:
   or vMix. Everything is driven by URL query parameters, so the same file
   serves every possible timer — nothing to configure on the widget side.
 
-## Deploying to Vercel
-
-1. Push this folder to a GitHub repo (or drag-and-drop deploy on vercel.com).
-2. Import it in Vercel — no framework preset needed, it's picked up as a
-   static site automatically.
-3. Deploy. You'll get a URL like `https://your-project.vercel.app`.
-4. Open `https://your-project.vercel.app/index.html`, build your timer, and
-   copy the link it generates (something like
-   `https://your-project.vercel.app/widget.html?mode=countdown&target=...`).
-
 ## Using the link in OBS
 
 1. Sources → **+** → **Browser**.
