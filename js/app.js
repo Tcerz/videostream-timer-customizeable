@@ -32,6 +32,12 @@
     copyBtn: $('#copyBtn'),
     copyConfirm: $('#copyConfirm'),
     tallyStrip: $('#tallyStrip'),
+    showControls: $('#showControls'),
+    autostart: $('#autostart'),
+    widgetId: $('#widgetId'),
+    color1: $('#color1'),
+    color2: $('#color2'),
+    resetColors: $('#resetColors'),
   };
 
   let selectedTemplate = '1';
@@ -59,10 +65,19 @@
         selectedTemplate = id;
         $$('.tpl-card').forEach((c) => c.classList.remove('selected'));
         card.classList.add('selected');
+        applyTemplateDefaultColors(id);
         update();
       });
       els.templateGallery.appendChild(card);
     });
+    applyTemplateDefaultColors(selectedTemplate);
+  }
+
+  function applyTemplateDefaultColors(id) {
+    const tpl = window.TIMER_TEMPLATES[id];
+    if (!tpl || !tpl.colors) return;
+    els.color1.value = tpl.colors.c1;
+    els.color2.value = tpl.colors.c2;
   }
 
   // ---------- mode-specific visibility ----------
@@ -80,6 +95,9 @@
     dChip.style.display = isClock ? 'none' : '';
 
     els.startAtWrap.style.display = els.countupFromNow.checked ? 'none' : '';
+
+    const playbackStrip = document.getElementById('playbackStrip');
+    playbackStrip.style.display = (mode === 'countdown-duration' || mode === 'countup') ? '' : 'none';
   }
 
   function getCheckedFields() {
@@ -138,8 +156,21 @@
     if (fields.includes('date')) params.set('dateFormat', els.dateFormat.value);
 
     params.set('template', selectedTemplate);
+    const tplDefaults = window.TIMER_TEMPLATES[selectedTemplate].colors || {};
+    if (els.color1.value && els.color1.value.toLowerCase() !== (tplDefaults.c1 || '').toLowerCase()) {
+      params.set('c1', els.color1.value);
+    }
+    if (els.color2.value && els.color2.value.toLowerCase() !== (tplDefaults.c2 || '').toLowerCase()) {
+      params.set('c2', els.color2.value);
+    }
     if (els.customCss.value.trim()) {
       params.set('css', TimerCore.utf8ToBase64(els.customCss.value));
+    }
+
+    if (mode === 'countdown-duration' || mode === 'countup') {
+      if (!els.showControls.checked) params.set('controls', '0');
+      if (!els.autostart.checked) params.set('autostart', '0');
+      params.set('id', els.widgetId.value.trim() || 'timer-1');
     }
 
     return params;
@@ -169,9 +200,15 @@
       els.mode, els.target, els.durHours, els.durMinutes, els.durSeconds, els.loop,
       els.countupFromNow, els.startAt, els.endText, els.showLabels, els.zeroPad,
       els.sep, els.timezone, els.dateFormat, els.customCss,
+      els.showControls, els.autostart, els.widgetId, els.color1, els.color2,
     ].forEach((el) => {
       el.addEventListener('input', update);
       el.addEventListener('change', update);
+    });
+
+    els.resetColors.addEventListener('click', () => {
+      applyTemplateDefaultColors(selectedTemplate);
+      update();
     });
 
     $$('#fieldToggles input[type="checkbox"]').forEach((el) => {

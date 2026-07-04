@@ -345,6 +345,40 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: .5px;
 }
 
+.color-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.color-field {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.color-field input[type="color"] {
+  width: 52px;
+  height: 36px;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  padding: 9px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .5px;
+  cursor: pointer;
+}
+
+.btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
 /* ---------- preview / output ---------- */
 
 .preview-frame {

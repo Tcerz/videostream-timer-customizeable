@@ -129,14 +129,56 @@
       </label>
     </div>
 
-    <div class="strip">
-      <h2 class="strip-title">04 — Style</h2>
-      <p class="strip-hint">12 ready-made looks. Pick one to skip styling entirely, or use it as a starting point below.</p>
-      <div class="template-gallery" id="templateGallery"></div>
+    <div class="strip" id="playbackStrip">
+      <h2 class="strip-title">04 — Playback Controls</h2>
+      <p class="strip-hint">
+        Adds Play / Pause / Reset buttons under the timer, so you can run it
+        straight from vMix or OBS — enable mouse clicks on the browser
+        source/input and you're set. Only available for a duration countdown
+        or a count-up; a fixed date or a plain clock can't be paused.
+        Crop the buttons out of frame if you don't want them on stream.
+      </p>
+      <div class="grid-2">
+        <label class="checkbox">
+          <input type="checkbox" id="showControls" checked>
+          <span>Show Play / Pause / Reset buttons</span>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="autostart" checked>
+          <span>Start running automatically on first load</span>
+        </label>
+      </div>
+      <label class="field">
+        <span>Widget ID <span class="optional">only matters if you run several timers at once</span></span>
+        <input type="text" id="widgetId" value="timer-1">
+      </label>
+      <p class="strip-hint">
+        The play/pause state is remembered by the browser it's running in,
+        so reloading the browser source in vMix/OBS resumes right where you
+        left off — no need to reopen the builder.
+      </p>
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">05 — Custom CSS <span class="optional">optional</span></h2>
+      <h2 class="strip-title">05 — Style</h2>
+      <p class="strip-hint">12 ready-made looks. Pick one to skip styling entirely, or use it as a starting point below.</p>
+      <div class="template-gallery" id="templateGallery"></div>
+
+      <div class="color-row">
+        <label class="field color-field">
+          <span>Primary color</span>
+          <input type="color" id="color1">
+        </label>
+        <label class="field color-field">
+          <span>Secondary color</span>
+          <input type="color" id="color2">
+        </label>
+        <button type="button" class="btn-ghost" id="resetColors">Reset to template colors</button>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">06 — Custom CSS <span class="optional">optional</span></h2>
       <p class="strip-hint">
         Overrides the template above. Target: <code>.timer-wrap</code>, <code>.segment</code>,
         <code>.value</code>, <code>.label</code>, <code>.sep</code>, <code>.date-line</code>, <code>.ended-text</code>.

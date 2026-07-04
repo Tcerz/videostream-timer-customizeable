@@ -39,7 +39,42 @@ Two pages:
 3. Match the resolution to your output.
 4. Layer it over your program feed like any other overlay input.
 
-## Templates
+## Play / Pause / Reset from vMix or OBS
+
+For a duration countdown (e.g. "10:00") or a count-up/stopwatch, the widget
+can show its own control buttons — no need to reopen the builder mid-show:
+
+1. In the builder, leave **"Show Play / Pause / Reset buttons"** checked.
+2. In vMix: right-click the Web Browser input → **enable mouse/keyboard
+   input** (or the equivalent "Interactive" option). In OBS: right-click the
+   Browser source → **Interact**, or enable interaction in its properties.
+3. Click the buttons directly on the preview/program feed to control the
+   timer live.
+
+The state is remembered by the browser the widget runs in (it survives a
+reload of that browser source), so you don't need to keep the builder page
+open — set it up once, then just click Play/Pause/Reset from vMix/OBS.
+If you don't want the buttons visible on the actual output, crop them out of
+frame (vMix's crop/zoom, or OBS's crop transform) — they sit in a small strip
+right under the numbers.
+
+A fixed "countdown to a date" or a plain clock can't be paused (there's
+nothing to pause — it's just reading the real clock), so no buttons appear
+for those modes.
+
+If you're running more than one timer at once, give each a different
+**Widget ID** in the Playback Controls section so their play/pause states
+don't collide.
+
+## Recoloring a template
+
+Every template exposes two accent colors. Pick a template, then use the
+**Primary color** / **Secondary color** pickers under the gallery — no CSS
+needed. "Reset to template colors" puts it back to the template's original
+palette. These map to the `c1` / `c2` URL parameters if you're hand-editing
+a link.
+
+
 
 12 built-in looks are available from the Style panel in the builder:
 Minimal Flat, Neon Glow, LCD Digital, Broadcast Tally, Glassmorphism, Retro
@@ -90,7 +125,11 @@ All optional unless noted.
 | `dateFormat` | token string | `DD MMM YYYY`, `DD/MM/YYYY`, `MM/DD/YYYY`, `YYYY-MM-DD` |
 | `timezone` | IANA name | e.g. `Asia/Jakarta`; defaults to the machine's local time |
 | `template` | `1`–`12` | built-in look, see list above |
-| `css` | base64 text | custom CSS, applied after the template |
+| `c1`, `c2` | hex color | override the template's two accent colors |
+| `css` | base64 text | custom CSS, applied after the template + colors |
+| `controls` | `0` | hide the Play/Pause/Reset buttons (shown by default when applicable) |
+| `autostart` | `0` | don't start running automatically on first load |
+| `id` | text | widget instance name, keeps multiple timers' play/pause state separate (default `timer`) |
 
 The builder generates all of this for you — you only need this table if
 you're hand-editing a link.
