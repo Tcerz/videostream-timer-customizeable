@@ -611,3 +611,80 @@ input[type="range"] {
   color: var(--text-dim);
   max-width: 960px;
 }
+
+/* ==========================================================================
+   Beat Pulse builder — style cards + mood swatches
+   ========================================================================== */
+
+.style-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.style-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  position: relative;
+}
+
+.style-card input[type="radio"] {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  accent-color: var(--green);
+}
+
+.style-card:has(input:checked) { border-color: var(--green); }
+
+.style-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  letter-spacing: .5px;
+  padding-right: 24px;
+}
+
+.style-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  padding-right: 24px;
+}
+
+.preset-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.swatch:hover { border-color: var(--text-dim); }
+
+.swatch-gradient {
+  display: block;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.swatch-name {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}

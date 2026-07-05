@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Beat Pulse Widget — Easy Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="index.html">&larr; Easy Overlay dashboard</a>
+</div>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="tally-strip">
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">B</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">E</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">A</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">T</span></div>
+    </div>
+    <div class="masthead-title">
+      <h1>BEAT PULSE</h1>
+      <p>Audio-reactive lighting overlay — colors and pulse follow the music, live</p>
+    </div>
+  </div>
+  <div class="rec-indicator"><span class="rec-dot"></span> LIVE PREVIEW</div>
+</header>
+
+<main class="console">
+
+  <section class="panel controls">
+
+    <div class="strip">
+      <h2 class="strip-title">01 — Visual Style</h2>
+      <p class="strip-hint">Pick how the pulse is drawn on screen.</p>
+      <div class="style-options" id="styleOptions">
+        <label class="style-card">
+          <input type="radio" name="style" value="glow" checked>
+          <span class="style-name">Full Glow</span>
+          <span class="style-desc">Ambient light wash filling the whole screen — good for projecting big to set the room's mood.</span>
+        </label>
+        <label class="style-card">
+          <input type="radio" name="style" value="orb">
+          <span class="style-name">Center Orb</span>
+          <span class="style-desc">A single glowing orb that pulses — subtle enough to layer as an overlay accent.</span>
+        </label>
+        <label class="style-card">
+          <input type="radio" name="style" value="bars">
+          <span class="style-name">EQ Bars</span>
+          <span class="style-desc">Classic equalizer bars across the spectrum, colored by energy.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">02 — Color Mood</h2>
+      <p class="strip-hint">Pick a mood, then fine-tune. The widget fades between these two colors live, following the music's energy.</p>
+      <div class="preset-swatches" id="presetSwatches"></div>
+      <div class="color-row">
+        <label class="field color-field">
+          <span>Calm color</span>
+          <input type="color" id="calmColor">
+        </label>
+        <label class="field color-field">
+          <span>Energetic color</span>
+          <input type="color" id="energeticColor">
+        </label>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">03 — Feel</h2>
+      <label class="field">
+        <span>Beat sensitivity — <span id="sensitivityValue">5</span>/10</span>
+        <input type="range" id="sensitivity" min="1" max="10" step="1" value="5">
+      </label>
+      <p class="strip-hint">Higher = triggers on smaller beats. If it's not reacting, raise this; if it's flickering nonstop, lower it.</p>
+      <label class="field">
+        <span>Ambient brightness — <span id="ambientValue">35%</span></span>
+        <input type="range" id="ambient" min="0" max="80" step="5" value="35">
+      </label>
+      <label class="field">
+        <span>Pulse strength — <span id="pulseValue">70%</span></span>
+        <input type="range" id="pulse" min="0" max="100" step="5" value="70">
+      </label>
+      <label class="field">
+        <span>Widget ID <span class="optional">only matters with multiple instances</span></span>
+        <input type="text" id="widgetId" value="beat-1">
+      </label>
+    </div>
+
+  </section>
+
+  <aside class="panel output">
+    <div class="strip">
+      <h2 class="strip-title">Preview</h2>
+      <p class="strip-hint">Click inside the preview to grant it mic access — this is just for testing here, it's separate from the permission you'll grant once inside OBS/vMix.</p>
+      <div class="preview-frame">
+        <iframe id="previewFrame" src="beat.html" title="Live preview" allow="microphone"></iframe>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">Browser Source URL</h2>
+      <p class="strip-hint">Copy this into OBS's Browser Source, or vMix's Web Browser input.</p>
+      <div class="url-row">
+        <input type="text" id="outputUrl" readonly>
+        <button id="copyBtn" class="btn-primary">Copy link</button>
+      </div>
+      <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
+    </div>
+
+    <div class="strip howto">
+      <h2 class="strip-title">Getting audio into it</h2>
+      <div class="howto-grid">
+        <div>
+          <h3>First-time setup</h3>
+          <ol>
+            <li>Add the URL as a Browser Source (OBS) / Web Browser input (vMix)</li>
+            <li>Right-click it → <strong>Interact</strong></li>
+            <li>Click "Enable Audio" once inside that window</li>
+            <li>Pick your input device from the dropdown that appears</li>
+          </ol>
+        </div>
+        <div>
+          <h3>Capturing the actual music</h3>
+          <p class="strip-hint" style="margin-top:0;">
+            A room mic works, but reacts to everything in the room. For a
+            cleaner reaction to just the music, route your DJ software's
+            output through a virtual audio cable (e.g. VB-CABLE,
+            VoiceMeeter) and pick that cable as the input device instead
+            of your physical mic.
+          </p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</main>
+
+<script src="js/beat-presets.js"></script>
+<script src="js/beat-core.js"></script>
+<script src="js/beat-app.js"></script>
+</body>
+</html>

@@ -169,12 +169,67 @@ you're hand-editing a link.
 index.html               dashboard — pick a widget
 timerstream.html          Timer & Clock builder UI
 widget.html                Timer & Clock overlay you paste into OBS/vMix
-css/console.css             shared styles (dashboard + all builder pages)
-js/templates.js              the 12 built-in templates
-js/timer-core.js              shared timer engine (param parsing, time math, render)
-js/app.js                      timerstream.html logic (live preview + link generation)
+beatstream.html            Beat Pulse builder UI
+beat.html                    Beat Pulse overlay you paste into OBS/vMix
+css/console.css               shared styles (dashboard + all builder pages)
+js/templates.js                the 12 built-in Timer & Clock templates
+js/timer-core.js                Timer & Clock engine (param parsing, time math, render)
+js/app.js                        timerstream.html logic (live preview + link generation)
+js/beat-presets.js                Beat Pulse color mood presets
+js/beat-core.js                    Beat Pulse engine (audio analysis, beat detection, render)
+js/beat-app.js                      beatstream.html logic (live preview + link generation)
 ```
 
 Adding a new widget later means: a new `<widget>stream.html` builder page, a
 new `<widget>.html` overlay page, and a new card on the dashboard pointing to
 it — the dashboard and shared CSS don't need to change.
+
+---
+
+# Beat Pulse — audio-reactive overlay for VJs
+
+`beatstream.html` (builder) and `beat.html` (overlay) — a lighting-style
+visual that listens to audio and reacts live:
+
+- **Beat detection**: watches the bass frequencies for spikes above their
+  recent average, and triggers a punchy pulse each time it fires.
+- **Energy-based color**: tracks overall loudness over a few seconds and
+  fades the color between your two configured colors — calm color at low
+  energy, energetic color at high energy.
+- **3 visual styles**: Full Glow (ambient wash, good for projecting on a
+  wall/screen to light up a room), Center Orb (a single pulsing orb, subtle
+  enough as an overlay accent), EQ Bars (classic spectrum bars).
+
+## Getting audio into it
+
+The browser needs an explicit click to grant microphone access — this is a
+security requirement, not a bug. Inside OBS/vMix:
+
+1. Add the generated URL as a Browser Source (OBS) or Web Browser input (vMix).
+2. Right-click it → **Interact**.
+3. Click **"Enable Audio"** inside that interactive window, once.
+4. A device dropdown appears — pick your input. It's remembered for next time.
+
+**Room mic vs. actual music:** a physical microphone works and is the
+simplest option, but it reacts to everything in the room, not just the
+music. For a cleaner reaction, route your DJ software / system audio
+through a virtual audio cable (VB-CABLE, VoiceMeeter, BlackHole on Mac,
+etc.) and select that cable as the input device instead of the mic.
+
+If the permission prompt never appears at all, your OBS/vMix build's
+embedded browser may have media capture disabled — test the same URL in a
+normal Chrome/Edge tab first to confirm the widget itself works, then
+troubleshoot the OBS/vMix side (updating OBS usually resolves this, since
+newer CEF versions support it better).
+
+## URL parameters (beat.html)
+
+| Param | Values | Notes |
+|---|---|---|
+| `style` | `glow` \| `orb` \| `bars` | default `glow` |
+| `calm` | hex color | color at low musical energy, default `#3A6FF7` |
+| `energetic` | hex color | color at high musical energy, default `#FF2E63` |
+| `sensitivity` | `1`–`10` | how easily a beat triggers, default `5` |
+| `ambient` | `0`–`100` | baseline brightness with no beat, default `35` |
+| `pulse` | `0`–`100` | how strong each beat's bump is, default `70` |
+| `id` | text | remembers the chosen input device separately per widget, default `beat` |
