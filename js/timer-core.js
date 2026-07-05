@@ -45,10 +45,21 @@
  *               .timer-wrap, .segment, .value, .label, .sep, .date-line,
  *               .timer-controls
  *
+ *   -- sizing --
+ *   All font sizes/paddings are defined in vmin (viewport-relative) rather
+ *   than fixed px, so the text is always crisp at whatever resolution you
+ *   set the OBS/vMix browser source to — resize the SOURCE'S resolution,
+ *   don't stretch the layer, and it will never look pixelated.
+ *   scale       a size multiplier, e.g. 0.5 - 3, default 1. Also
+ *               adjustable live with the −/+ buttons on the widget
+ *               (persisted per `id`, see below).
+ *   sizeControls 1 (default) to show the on-widget −/⟲/+ size buttons.
+ *
  *   -- play / pause / reset controls --
- *   controls    1 (default) to show the control bar. Only rendered for
- *               `mode=countdown` with `duration` set, or `mode=countup`
- *               — a fixed `target` date or a plain clock can't be paused.
+ *   controls    1 (default) to show the Play/Pause/Reset buttons. Only
+ *               rendered for `mode=countdown` with `duration` set, or
+ *               `mode=countup` — a fixed `target` date or a plain clock
+ *               can't be paused.
  *   autostart   1 (default) to start running immediately the very first
  *               time the widget loads. Ignored on later loads — once a
  *               saved state exists (browser localStorage), it always
@@ -56,11 +67,14 @@
  *               OBS/vMix does not reset an in-progress timer.
  *   id          a short name identifying this widget instance, default
  *               "timer". Give each simultaneous timer a different id so
- *               their play/pause state doesn't collide in storage.
+ *               their play/pause/size state doesn't collide in storage.
  */
 
 window.TimerCore = (function () {
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MIN_SCALE = 0.4;
+  const MAX_SCALE = 3;
+  const SCALE_STEP = 0.1;
 
   function getParams() {
     return new URLSearchParams(window.location.search);
@@ -116,11 +130,16 @@ window.TimerCore = (function () {
     return tokenFormat.replace(/YYYY|MMM|MM|DD/g, (tok) => map[tok] ?? tok);
   }
 
+  function clampScale(v) {
+    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(v * 100) / 100));
+  }
+
   function loadConfigFromParams(params) {
     const mode = params.get('mode') || 'clock';
     const fieldsRaw = params.get('fields') || (mode === 'clock' ? 'date,h,m,s' : 'h,m,s');
     const fields = fieldsRaw.split(',').map((f) => f.trim()).filter(Boolean);
     const hasDuration = params.has('duration') && !isNaN(parseInt(params.get('duration'), 10));
+    const scaleParam = parseFloat(params.get('scale'));
 
     return {
       mode,
@@ -139,7 +158,10 @@ window.TimerCore = (function () {
       c1: params.get('c1') || '',
       c2: params.get('c2') || '',
       customCss: params.has('css') ? base64ToUtf8(params.get('css')) : '',
-      controlsEnabled: params.get('controls') !== '0' && (mode === 'countup' || (mode === 'countdown' && hasDuration)),
+      playbackControlsEnabled:
+        params.get('controls') !== '0' && (mode === 'countup' || (mode === 'countdown' && hasDuration)),
+      sizeControlsEnabled: params.get('sizeControls') !== '0',
+      initialScale: isNaN(scaleParam) ? 1 : clampScale(scaleParam),
       autostart: params.get('autostart') !== '0',
       widgetId: params.get('id') || 'timer',
     };
@@ -186,14 +208,31 @@ window.TimerCore = (function () {
     return wrap;
   }
 
-  function buildControls() {
+  function buildControlsBar(config) {
+    if (!config.sizeControlsEnabled && !config.playbackControlsEnabled) return null;
     const bar = document.createElement('div');
     bar.className = 'timer-controls';
-    bar.innerHTML = `
-      <button type="button" class="ctrl-btn ctrl-play" data-action="play" title="Play">&#9654;</button>
-      <button type="button" class="ctrl-btn ctrl-pause" data-action="pause" title="Pause">&#10074;&#10074;</button>
-      <button type="button" class="ctrl-btn ctrl-reset" data-action="reset" title="Reset">&#8635;</button>
-    `;
+    let html = '';
+
+    if (config.sizeControlsEnabled) {
+      html += `
+        <button type="button" class="ctrl-btn ctrl-size-down" data-action="size-down" title="Smaller">&#8722;</button>
+        <button type="button" class="ctrl-btn ctrl-size-reset" data-action="size-reset" title="Reset size">&#8635;</button>
+        <button type="button" class="ctrl-btn ctrl-size-up" data-action="size-up" title="Bigger">&#43;</button>
+      `;
+    }
+    if (config.sizeControlsEnabled && config.playbackControlsEnabled) {
+      html += `<span class="ctrl-divider"></span>`;
+    }
+    if (config.playbackControlsEnabled) {
+      html += `
+        <button type="button" class="ctrl-btn ctrl-play" data-action="play" title="Play">&#9654;</button>
+        <button type="button" class="ctrl-btn ctrl-pause" data-action="pause" title="Pause">&#10074;&#10074;</button>
+        <button type="button" class="ctrl-btn ctrl-reset" data-action="reset" title="Reset">&#8635;</button>
+      `;
+    }
+
+    bar.innerHTML = html;
     return bar;
   }
 
@@ -224,10 +263,14 @@ window.TimerCore = (function () {
     return config.pad ? pad2(n) : String(Math.floor(Math.max(n, 0)));
   }
 
-  // ---------------- persisted play/pause/reset state ----------------
+  // ---------------- persisted play/pause/reset + size state ----------------
 
   function storageKey(config) {
     return 'timecode:' + config.widgetId;
+  }
+
+  function scaleStorageKey(config) {
+    return 'timecode:' + config.widgetId + ':scale';
   }
 
   function loadState(config) {
@@ -242,7 +285,6 @@ window.TimerCore = (function () {
       const elapsedMs = seed && !isNaN(seed) ? Date.now() - seed.getTime() : 0;
       return { status: config.autostart ? 'running' : 'paused', elapsedMs, lastUpdate: Date.now() };
     }
-    // countdown with duration
     return {
       status: config.autostart ? 'running' : 'paused',
       remainingMs: (config.duration || 0) * 1000,
@@ -258,39 +300,34 @@ window.TimerCore = (function () {
     }
   }
 
-  function wireControls(bar, config, state, onChange) {
-    bar.addEventListener('click', (e) => {
-      const btn = e.target.closest('.ctrl-btn');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      const now = Date.now();
+  function loadScale(config) {
+    try {
+      const raw = window.localStorage.getItem(scaleStorageKey(config));
+      if (raw !== null) return clampScale(parseFloat(raw));
+    } catch (e) {
+      /* ignore */
+    }
+    return config.initialScale;
+  }
 
-      if (action === 'play') {
-        if (state.status === 'finished') {
-          if (config.mode === 'countup') state.elapsedMs = 0;
-          else state.remainingMs = (config.duration || 0) * 1000;
-        }
-        state.status = 'running';
-        state.lastUpdate = now;
-      } else if (action === 'pause') {
-        state.status = 'paused';
-        state.lastUpdate = now;
-      } else if (action === 'reset') {
-        if (config.mode === 'countup') state.elapsedMs = 0;
-        else state.remainingMs = (config.duration || 0) * 1000;
-        state.status = 'paused';
-        state.lastUpdate = now;
-      }
+  function saveScale(config, value) {
+    try {
+      window.localStorage.setItem(scaleStorageKey(config), String(value));
+    } catch (e) {
+      /* ignore */
+    }
+  }
 
-      saveState(config, state);
-      onChange();
-    });
+  function applyScale(value) {
+    document.body.style.setProperty('--wscale', value);
   }
 
   function updateControlsUI(bar, state) {
     if (!bar) return;
-    bar.querySelector('.ctrl-play').disabled = state.status === 'running';
-    bar.querySelector('.ctrl-pause').disabled = state.status !== 'running';
+    const playBtn = bar.querySelector('.ctrl-play');
+    const pauseBtn = bar.querySelector('.ctrl-pause');
+    if (playBtn) playBtn.disabled = state.status === 'running';
+    if (pauseBtn) pauseBtn.disabled = state.status !== 'running';
   }
 
   function start(rootSelector) {
@@ -299,14 +336,14 @@ window.TimerCore = (function () {
     const root = document.querySelector(rootSelector);
     applyCss(config);
 
+    let scale = loadScale(config);
+    applyScale(scale);
+
     let wrap = buildTimerWrap(config);
     root.appendChild(wrap);
 
-    let controlsBar = null;
-    if (config.controlsEnabled) {
-      controlsBar = buildControls();
-      root.appendChild(controlsBar);
-    }
+    const controlsBar = buildControlsBar(config);
+    if (controlsBar) root.appendChild(controlsBar);
 
     const state = loadState(config);
 
@@ -317,7 +354,49 @@ window.TimerCore = (function () {
     }
 
     if (controlsBar) {
-      wireControls(controlsBar, config, state, () => {
+      controlsBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.ctrl-btn');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const now = Date.now();
+
+        if (action === 'size-down') {
+          scale = clampScale(scale - SCALE_STEP);
+          applyScale(scale);
+          saveScale(config, scale);
+          return;
+        }
+        if (action === 'size-up') {
+          scale = clampScale(scale + SCALE_STEP);
+          applyScale(scale);
+          saveScale(config, scale);
+          return;
+        }
+        if (action === 'size-reset') {
+          scale = config.initialScale;
+          applyScale(scale);
+          saveScale(config, scale);
+          return;
+        }
+
+        if (action === 'play') {
+          if (state.status === 'finished') {
+            if (config.mode === 'countup') state.elapsedMs = 0;
+            else state.remainingMs = (config.duration || 0) * 1000;
+          }
+          state.status = 'running';
+          state.lastUpdate = now;
+        } else if (action === 'pause') {
+          state.status = 'paused';
+          state.lastUpdate = now;
+        } else if (action === 'reset') {
+          if (config.mode === 'countup') state.elapsedMs = 0;
+          else state.remainingMs = (config.duration || 0) * 1000;
+          state.status = 'paused';
+          state.lastUpdate = now;
+        }
+
+        saveState(config, state);
         if (wrap.querySelector('.ended-text')) rebuildWrap();
         tick();
       });
@@ -369,8 +448,7 @@ window.TimerCore = (function () {
       }
 
       // countdown
-      if (config.target && !config.controlsEnabled) {
-        // fixed wall-clock target, no manual controls — always live
+      if (config.target && !config.playbackControlsEnabled) {
         const remainingMs = new Date(config.target).getTime() - Date.now();
         if (remainingMs <= 0) {
           if (!wrap.classList.contains('finished')) showEnded();
@@ -381,7 +459,6 @@ window.TimerCore = (function () {
         return;
       }
 
-      // countdown with duration (controllable)
       const t = Date.now();
       if (state.status === 'running') {
         const delta = t - (state.lastUpdate || t);

@@ -1,16 +1,24 @@
-# Timecode — Timer Widget for OBS & vMix
+# Easy Overlay — Widgets for Streaming
 
-A customizable countdown / count-up / clock overlay you drop into OBS Studio or
-vMix as a Browser Source. No build step, no server — it's static HTML/CSS/JS,
+A dashboard of browser-source overlay widgets for OBS Studio, vMix, and
+anything else that accepts a URL as a source. It's built to grow — more
+widgets get added as new pages, all listed from one dashboard.
+
+Right now there's one widget, **Timer & Clock**: a customizable countdown /
+count-up / clock overlay. No build step, no server — it's static HTML/CSS/JS,
 so it deploys to Vercel as-is.
 
-Two pages:
+Pages:
 
-- **`index.html`** — the builder. Pick a mode, pick what fields to show, pick
-  a template (or write your own CSS), then copy the generated link.
-- **`widget.html`** — the actual overlay. This is the URL you paste into OBS
-  or vMix. Everything is driven by URL query parameters, so the same file
-  serves every possible timer — nothing to configure on the widget side.
+- **`index.html`** — the dashboard. Lists every available widget; click one
+  to open its builder. This is your site's home page.
+- **`timerstream.html`** — the Timer & Clock builder. Pick a mode, pick what
+  fields to show, pick a template (or write your own CSS), then copy the
+  generated link.
+- **`widget.html`** — the actual Timer & Clock overlay. This is the URL you
+  paste into OBS or vMix. Everything is driven by URL query parameters, so
+  the same file serves every possible timer — nothing to configure on the
+  widget side.
 
 ## Deploying to Vercel
 
@@ -18,8 +26,8 @@ Two pages:
 2. Import it in Vercel — no framework preset needed, it's picked up as a
    static site automatically.
 3. Deploy. You'll get a URL like `https://your-project.vercel.app`.
-4. Open `https://your-project.vercel.app/index.html`, build your timer, and
-   copy the link it generates (something like
+4. Open it — you'll land on the dashboard. Click **Timer & Clock**, build
+   your timer, and copy the link it generates (something like
    `https://your-project.vercel.app/widget.html?mode=countdown&target=...`).
 
 ## Using the link in OBS
@@ -106,6 +114,25 @@ Example — plain white numbers, no card, bigger:
 .sep { color: #ffffff; font-size: 140px; }
 ```
 
+## Resizing without it turning blurry/pixelated
+
+All text is sized in `vmin` (relative to the browser source's own
+resolution) instead of fixed pixels, and there are on-widget **−/⟲/+**
+buttons to fine-tune it live. What actually causes the "pecah" (pixelated)
+look in vMix/OBS is stretching the *layer* bigger than the browser source's
+own declared resolution — that upscales an already-rendered image. Instead:
+
+1. Set the Browser Source/Web Browser input's **Width/Height** to the size
+   you actually need (e.g. your full canvas, 1920×1080 or larger) — don't
+   add it small and then drag it bigger on the canvas.
+2. Use the **Size** section in the builder, or the −/⟲/+ buttons on the
+   widget itself (enable mouse input the same way as the playback
+   controls), to fine-tune how big the timer looks inside that resolution.
+
+Because the text re-renders at whatever size you set rather than being
+scaled up from a smaller image, it stays sharp. The chosen size is
+remembered per widget `id`, the same way play/pause state is.
+
 ## URL parameters (widget.html)
 
 All optional unless noted.
@@ -129,7 +156,9 @@ All optional unless noted.
 | `css` | base64 text | custom CSS, applied after the template + colors |
 | `controls` | `0` | hide the Play/Pause/Reset buttons (shown by default when applicable) |
 | `autostart` | `0` | don't start running automatically on first load |
-| `id` | text | widget instance name, keeps multiple timers' play/pause state separate (default `timer`) |
+| `id` | text | widget instance name, keeps multiple timers' play/pause/size state separate (default `timer`) |
+| `scale` | number | size multiplier, e.g. `0.5`–`3`, default `1` |
+| `sizeControls` | `0` | hide the on-widget −/⟲/+ resize buttons |
 
 The builder generates all of this for you — you only need this table if
 you're hand-editing a link.
@@ -137,10 +166,15 @@ you're hand-editing a link.
 ## Project structure
 
 ```
-index.html          the builder UI
-widget.html          the overlay you paste into OBS/vMix
-css/console.css       styles for the builder page only
-js/templates.js        the 12 built-in templates
-js/timer-core.js       shared timer engine (param parsing, time math, render)
-js/app.js               builder page logic (live preview + link generation)
+index.html               dashboard — pick a widget
+timerstream.html          Timer & Clock builder UI
+widget.html                Timer & Clock overlay you paste into OBS/vMix
+css/console.css             shared styles (dashboard + all builder pages)
+js/templates.js              the 12 built-in templates
+js/timer-core.js              shared timer engine (param parsing, time math, render)
+js/app.js                      timerstream.html logic (live preview + link generation)
 ```
+
+Adding a new widget later means: a new `<widget>stream.html` builder page, a
+new `<widget>.html` overlay page, and a new card on the dashboard pointing to
+it — the dashboard and shared CSS don't need to change.

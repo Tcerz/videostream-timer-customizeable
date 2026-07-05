@@ -38,6 +38,9 @@
     color1: $('#color1'),
     color2: $('#color2'),
     resetColors: $('#resetColors'),
+    scale: $('#scale'),
+    scaleValue: $('#scaleValue'),
+    sizeControls: $('#sizeControls'),
   };
 
   let selectedTemplate = '1';
@@ -167,6 +170,10 @@
       params.set('css', TimerCore.utf8ToBase64(els.customCss.value));
     }
 
+    const scaleVal = parseFloat(els.scale.value);
+    if (Math.abs(scaleVal - 1) > 0.001) params.set('scale', String(scaleVal));
+    if (!els.sizeControls.checked) params.set('sizeControls', '0');
+
     if (mode === 'countdown-duration' || mode === 'countup') {
       if (!els.showControls.checked) params.set('controls', '0');
       if (!els.autostart.checked) params.set('autostart', '0');
@@ -184,7 +191,7 @@
     els.dateFormatWrap.style.display = getCheckedFields().includes('date') ? '' : 'none';
 
     const params = buildParams();
-    const base = window.location.href.replace(/index\.html.*$/, '').replace(/\/$/, '') + '/widget.html';
+    const base = window.location.href.replace(/[^/]*$/, '') + 'widget.html';
     const fullUrl = base + '?' + params.toString();
     els.outputUrl.value = fullUrl;
 
@@ -201,9 +208,14 @@
       els.countupFromNow, els.startAt, els.endText, els.showLabels, els.zeroPad,
       els.sep, els.timezone, els.dateFormat, els.customCss,
       els.showControls, els.autostart, els.widgetId, els.color1, els.color2,
+      els.scale, els.sizeControls,
     ].forEach((el) => {
       el.addEventListener('input', update);
       el.addEventListener('change', update);
+    });
+
+    els.scale.addEventListener('input', () => {
+      els.scaleValue.textContent = Math.round(parseFloat(els.scale.value) * 100) + '%';
     });
 
     els.resetColors.addEventListener('click', () => {
