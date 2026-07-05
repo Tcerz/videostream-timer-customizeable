@@ -20,7 +20,6 @@ Pages:
   the same file serves every possible timer — nothing to configure on the
   widget side.
 
-<<<<<<< HEAD
 ## Deploying to Vercel
 
 1. Push this folder to a GitHub repo (or drag-and-drop deploy on vercel.com).
@@ -31,8 +30,6 @@ Pages:
    your timer, and copy the link it generates (something like
    `https://your-project.vercel.app/widget.html?mode=countdown&target=...`).
 
-=======
->>>>>>> 805e58858986a8486a48957b472fd8987403cec7
 ## Using the link in OBS
 
 1. Sources → **+** → **Browser**.
