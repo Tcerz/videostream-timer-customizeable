@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scoreboard Widget — Easy Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="index.html">&larr; Easy Overlay dashboard</a>
+</div>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="tally-strip">
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">V</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">S</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">C</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">R</span></div>
+    </div>
+    <div class="masthead-title">
+      <h1>SCOREBOARD</h1>
+      <p>Team vs. team overlay for football, futsal, basketball, or any match — with a match timer</p>
+    </div>
+  </div>
+  <div class="rec-indicator"><span class="rec-dot"></span> LIVE PREVIEW</div>
+</header>
+
+<main class="console">
+
+  <section class="panel controls">
+
+    <div class="strip">
+      <h2 class="strip-title">01 — Team 1</h2>
+      <label class="field">
+        <span>Team name</span>
+        <input type="text" id="t1Name" value="Home">
+      </label>
+      <label class="field">
+        <span>Starting score</span>
+        <input type="number" id="t1Score" value="0" min="0">
+      </label>
+      <label class="field">
+        <span>Logo <span class="optional">optional — shows initials if skipped</span></span>
+        <input type="file" id="t1Logo" accept="image/*">
+      </label>
+      <div class="logo-preview-row" id="t1LogoPreviewRow" style="display:none">
+        <img id="t1LogoPreview" class="logo-preview-img" alt="Team 1 logo preview">
+        <button type="button" class="btn-ghost" id="t1LogoClear">Remove logo</button>
+      </div>
+      <label class="field">
+        <span>Accent color</span>
+        <input type="color" id="t1Color">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">02 — Team 2</h2>
+      <label class="field">
+        <span>Team name</span>
+        <input type="text" id="t2Name" value="Away">
+      </label>
+      <label class="field">
+        <span>Starting score</span>
+        <input type="number" id="t2Score" value="0" min="0">
+      </label>
+      <label class="field">
+        <span>Logo <span class="optional">optional — shows initials if skipped</span></span>
+        <input type="file" id="t2Logo" accept="image/*">
+      </label>
+      <div class="logo-preview-row" id="t2LogoPreviewRow" style="display:none">
+        <img id="t2LogoPreview" class="logo-preview-img" alt="Team 2 logo preview">
+        <button type="button" class="btn-ghost" id="t2LogoClear">Remove logo</button>
+      </div>
+      <label class="field">
+        <span>Accent color</span>
+        <input type="color" id="t2Color">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">03 — Match Timer <span class="optional">optional</span></h2>
+      <label class="field">
+        <span>Timer type</span>
+        <select id="timerMode">
+          <option value="off">No timer — score only</option>
+          <option value="countup">Count up (stopwatch, e.g. football match clock)</option>
+          <option value="countdown">Count down (e.g. basketball period clock)</option>
+        </select>
+      </label>
+      <div id="durationWrap" class="mode-opts" style="display:none">
+        <label class="field">
+          <span>Starting duration</span>
+          <div class="inline-fields">
+            <input type="number" id="durMinutes" min="0" value="10" placeholder="MM">
+            <input type="number" id="durSeconds" min="0" max="59" value="0" placeholder="SS">
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">04 — Style</h2>
+      <div class="template-gallery" id="templateGallery"></div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">05 — Controls</h2>
+      <p class="strip-hint">
+        Adds +/− score buttons (and Play/Pause/Reset for the timer, if
+        enabled) directly under the scoreboard, so you can run the whole
+        match straight from vMix or OBS — enable mouse clicks on the
+        browser source/input and you're set.
+      </p>
+      <label class="checkbox">
+        <input type="checkbox" id="showControls" checked>
+        <span>Show on-widget score/timer buttons</span>
+      </label>
+      <label class="field">
+        <span>Widget ID <span class="optional">only matters if you run several scoreboards at once</span></span>
+        <input type="text" id="widgetId" value="score-1">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">06 — Custom CSS <span class="optional">optional</span></h2>
+      <p class="strip-hint">
+        Overrides the template above. Target: <code>.scoreboard-wrap</code>,
+        <code>.team-row</code>, <code>.team-logo</code>, <code>.team-name</code>,
+        <code>.team-score</code>, <code>.match-timer</code>.
+      </p>
+      <textarea id="customCss" rows="6" spellcheck="false" placeholder=".team-name {
+  text-transform: uppercase;
+}"></textarea>
+    </div>
+
+  </section>
+
+  <aside class="panel output">
+    <div class="strip">
+      <h2 class="strip-title">Preview</h2>
+      <div class="preview-frame">
+        <iframe id="previewFrame" src="score.html" title="Live preview"></iframe>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">Browser Source URL</h2>
+      <p class="strip-hint">Copy this into OBS's Browser Source, or vMix's Web Browser input.</p>
+      <div class="url-row">
+        <input type="text" id="outputUrl" readonly>
+        <button id="copyBtn" class="btn-primary">Copy link</button>
+      </div>
+      <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
+      <p class="strip-hint" id="urlLengthHint" style="margin-top:10px; margin-bottom:0;"></p>
+    </div>
+
+    <div class="strip howto">
+      <h2 class="strip-title">Controlling the match live</h2>
+      <div class="howto-grid">
+        <div>
+          <h3>OBS Studio</h3>
+          <ol>
+            <li>Sources → + → Browser, paste the URL</li>
+            <li>Right-click it → <strong>Interact</strong></li>
+            <li>Click +/− to update the score live</li>
+          </ol>
+        </div>
+        <div>
+          <h3>vMix</h3>
+          <ol>
+            <li>Add Input → Web Browser, paste the URL</li>
+            <li>Right-click → enable mouse/keyboard input</li>
+            <li>Click +/− to update the score live</li>
+          </ol>
+        </div>
+      </div>
+      <p class="strip-hint" style="margin-top:14px;">
+        The score and timer are remembered by the browser they're running
+        in, so reloading that browser source resumes right where you left
+        off — no need to reopen this builder mid-match.
+      </p>
+    </div>
+  </aside>
+
+</main>
+
+<script src="js/score-templates.js"></script>
+<script src="js/score-core.js"></script>
+<script src="js/score-app.js"></script>
+</body>
+</html>

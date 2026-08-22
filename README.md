@@ -171,6 +171,8 @@ timerstream.html          Timer & Clock builder UI
 widget.html                Timer & Clock overlay you paste into OBS/vMix
 beatstream.html            Beat Pulse builder UI
 beat.html                    Beat Pulse overlay you paste into OBS/vMix
+scorestream.html            Scoreboard builder UI
+score.html                    Scoreboard overlay you paste into OBS/vMix
 css/console.css               shared styles (dashboard + all builder pages)
 js/templates.js                the 12 built-in Timer & Clock templates
 js/timer-core.js                Timer & Clock engine (param parsing, time math, render)
@@ -178,6 +180,9 @@ js/app.js                        timerstream.html logic (live preview + link gen
 js/beat-presets.js                Beat Pulse color mood presets
 js/beat-core.js                    Beat Pulse engine (audio analysis, beat detection, render)
 js/beat-app.js                      beatstream.html logic (live preview + link generation)
+js/score-templates.js                the 6 built-in Scoreboard layouts
+js/score-core.js                      Scoreboard engine (score/timer state, on-widget controls)
+js/score-app.js                        scorestream.html logic (logo upload, live preview, link generation)
 ```
 
 Adding a new widget later means: a new `<widget>stream.html` builder page, a
@@ -233,3 +238,67 @@ newer CEF versions support it better).
 | `ambient` | `0`–`100` | baseline brightness with no beat, default `35` |
 | `pulse` | `0`–`100` | how strong each beat's bump is, default `70` |
 | `id` | text | remembers the chosen input device separately per widget, default `beat` |
+
+---
+
+# Scoreboard — team vs. team overlay with a match timer
+
+`scorestream.html` (builder) and `score.html` (overlay) — a two-team score
+display with logos, a name, a live score, and an optional match timer.
+Built for football/futsal, basketball, or any versus-style match, but works
+for any two-side score.
+
+## Layout
+
+```
+[logo]  Team 1 name   [score]
+[logo]  Team 2 name   [score]
+[         match timer         ]   (only if a timer mode is enabled)
+```
+
+If you don't upload a logo for a team, it shows a colored circle with that
+team's initials instead — so it still looks finished without any image.
+
+## Updating the score live from vMix/OBS
+
+Same approach as the Timer widget's Play/Pause/Reset:
+
+1. Leave **"Show on-widget score/timer buttons"** checked in the builder.
+2. In vMix: right-click the Web Browser input → enable mouse/keyboard
+   input. In OBS: right-click the Browser source → **Interact**.
+3. Click **+ / −** under each team's name to update their score live, and
+   Play/Pause/Reset for the match timer if you enabled one.
+
+Score and timer state is remembered by the browser the widget runs in, so
+reloading that browser source resumes from where you left off.
+
+## About the logo upload
+
+Logos are embedded directly into the widget link (as a compressed,
+resized image) rather than uploaded to a server — this keeps the project
+server-less, and the same "copy one link, paste into vMix/OBS" workflow
+works for a scoreboard with logos as it does for every other widget here.
+The builder automatically resizes any uploaded image to a small size
+before encoding it, to keep the link a reasonable length. If your link
+ends up very long (the builder will warn you), try a smaller or simpler
+source image.
+
+## URL parameters (score.html)
+
+| Param | Values | Notes |
+|---|---|---|
+| `t1`, `t2` | text | team names, default `Team 1` / `Team 2` |
+| `s1`, `s2` | number | starting score, default `0` |
+| `logo1`, `logo2` | data URI | team logo image, built automatically by the builder |
+| `template` | `1`–`6` | built-in layout, see below |
+| `c1`, `c2` | hex color | override each team's accent color |
+| `css` | base64 text | custom CSS, applied after the template |
+| `timer` | `off` \| `countup` \| `countdown` | default `off` |
+| `duration` | seconds | starting time for `timer=countdown` |
+| `controls` | `0` | hide the on-widget score/timer buttons |
+| `id` | text | widget instance name, keeps multiple scoreboards' state separate (default `score`) |
+
+## Templates
+
+6 built-in layouts: Broadcast Bar, Box Score, Minimal Clean, Esports Neon,
+Football Classic, and Basketball Bold.
