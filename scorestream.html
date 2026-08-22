@@ -264,7 +264,26 @@
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">08 — Custom CSS <span class="optional">optional</span></h2>
+      <h2 class="strip-title">08 — Match Log (MockAPI) <span class="optional">optional</span></h2>
+      <p class="strip-hint">
+        By default, clicking the 📋 button on the widget only saves the match
+        to that browser's local storage — so <code>matchlog.html</code> only
+        shows matches logged in the <em>same browser</em> (e.g. it won't see
+        matches logged inside vMix/OBS's own embedded browser). Paste a
+        <a href="https://mockapi.io" target="_blank" rel="noopener">MockAPI</a>
+        resource URL here (create a resource named <code>matchlog</code> in
+        your MockAPI project, then paste its endpoint, e.g.
+        <code>https://&lt;project-id&gt;.mockapi.io/matchlog</code>) to have
+        every logged match sent there instead — centrally, from any browser.
+      </p>
+      <label class="field">
+        <span>MockAPI endpoint URL <span class="optional">leave blank to keep using local storage only</span></span>
+        <input type="url" id="logApiUrl" placeholder="https://<project-id>.mockapi.io/matchlog">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">09 — Custom CSS <span class="optional">optional</span></h2>
       <p class="strip-hint">
         Overrides the template above. Target: <code>.scoreboard-wrap</code>,
         <code>.team-block</code>, <code>.team-logo</code>, <code>.team-name</code>,

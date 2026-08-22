@@ -54,6 +54,7 @@
 
     showControls: $('#showControls'),
     widgetId: $('#widgetId'),
+    logApiUrl: $('#logApiUrl'),
     customCss: $('#customCss'),
 
     previewFrame: $('#previewFrame'),
@@ -66,6 +67,24 @@
   let selectedTemplate = '1';
   let logo1DataUrl = '';
   let logo2DataUrl = '';
+
+  // ---------- match log API endpoint (remembered across builder sessions) ----------
+  const LOG_API_KEY = 'sb-log-api-url';
+  function loadLogApiUrl() {
+    try {
+      const saved = window.localStorage.getItem(LOG_API_KEY);
+      if (saved) els.logApiUrl.value = saved;
+    } catch (e) {
+      /* ignore */
+    }
+  }
+  function saveLogApiUrl() {
+    try {
+      window.localStorage.setItem(LOG_API_KEY, els.logApiUrl.value.trim());
+    } catch (e) {
+      /* ignore */
+    }
+  }
 
   // ---------- team library (saved teams, so you don't retype/re-upload) ----------
   const TEAM_LIBRARY_KEY = 'sb-team-library';
@@ -375,6 +394,9 @@
     if (!els.showControls.checked) params.set('controls', '0');
     params.set('id', els.widgetId.value.trim() || 'score-1');
 
+    const logApiUrl = els.logApiUrl.value.trim();
+    if (logApiUrl) params.set('logApi', logApiUrl);
+
     if (els.customCss.value.trim()) {
       const bytes = new TextEncoder().encode(els.customCss.value);
       let binary = '';
@@ -429,11 +451,13 @@
       els.timerMode, els.firstHalfMinutes, els.secondHalfMinutes, els.durMinutes, els.durSeconds,
       els.timerVisibleDefault,
       els.scale, els.sizeControls,
-      els.showControls, els.widgetId, els.customCss,
+      els.showControls, els.widgetId, els.logApiUrl, els.customCss,
     ].forEach((el) => {
       el.addEventListener('input', update);
       el.addEventListener('change', update);
     });
+
+    els.logApiUrl.addEventListener('change', saveLogApiUrl);
 
     wireLogoInput(els.t1Logo, els.t1LogoPreviewRow, els.t1LogoPreview, els.t1LogoClear, (v) => (logo1DataUrl = v));
     wireLogoInput(els.t2Logo, els.t2LogoPreviewRow, els.t2LogoPreview, els.t2LogoClear, (v) => (logo2DataUrl = v));
@@ -459,5 +483,6 @@
   bindEvents();
   wireTeamLibrary();
   renderTeamLibrary();
+  loadLogApiUrl();
   update();
 })();

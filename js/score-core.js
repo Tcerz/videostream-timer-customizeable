@@ -48,6 +48,18 @@
  *   id                      widget instance name, keeps this scoreboard's
  *                           live state separate from any other instance,
  *                           default "score"
+ *
+ *   -- match log --
+ *   logApi                  optional MockAPI (or any REST) resource URL,
+ *                           e.g. https://<project-id>.mockapi.io/matchlog
+ *                           When set, clicking the 📋 (log match) button
+ *                           POSTs the result there instead of only saving
+ *                           to this browser's local storage — so every
+ *                           scoreboard instance, in any browser (including
+ *                           vMix/OBS's embedded one), logs to one shared
+ *                           place that matchlog.html can read from any
+ *                           browser too. Falls back to local storage if
+ *                           the request fails.
  */
 
 window.ScoreCore = (function () {
@@ -125,6 +137,13 @@ window.ScoreCore = (function () {
 
       controlsEnabled: params.get('controls') !== '0',
       widgetId: params.get('id') || 'score',
+
+      // Optional MockAPI (or any REST endpoint) resource URL, e.g.
+      // https://<project-id>.mockapi.io/matchlog — when set, logged matches
+      // are POSTed there (centrally, readable from any browser) in addition
+      // to the local per-browser fallback. Leave unset to keep the old
+      // local-storage-only behavior.
+      logApi: (params.get('logApi') || '').trim(),
     };
   }
 
@@ -323,34 +342,7 @@ window.ScoreCore = (function () {
   // report from matchlog.html at the end.
   const MATCH_LOG_KEY = 'sb-matchlog';
 
-  function logMatchResult(config, state) {
-    let entry = {
-      id: 'm-' + Date.now(),
-      timestamp: new Date().toISOString(),
-      t1: config.t1,
-      t2: config.t2,
-      s1: state.s1,
-      s2: state.s2,
-      timerMode: config.timerMode,
-      widgetId: config.widgetId,
-    };
-    if (config.timerMode === 'football') {
-      entry.half1Minutes = Math.round(config.half1Length / 60);
-      entry.half2Minutes = Math.round(config.half2Length / 60);
-      entry.halfReached = state.half;
-      entry.stoppageMinutesAnnounced = state.stoppageMinutes;
-      entry.finalClock = formatFootballClock(
-        state.halfElapsedMs,
-        (state.half === 1 ? config.half1Length : config.half2Length) * 1000,
-        state.half === 1 ? 0 : config.half1Length * 1000,
-        state.stoppageClockActive
-      );
-    } else if (config.timerMode === 'countup') {
-      entry.elapsedClock = formatClock(state.elapsedMs);
-    } else if (config.timerMode === 'countdown') {
-      entry.remainingClock = formatClock(state.remainingMs);
-    }
-
+  function saveMatchToLocalLog(entry) {
     let list = [];
     try {
       const raw = window.localStorage.getItem(MATCH_LOG_KEY);
@@ -364,6 +356,66 @@ window.ScoreCore = (function () {
     } catch (e) {
       /* ignore — logging just won't persist */
     }
+  }
+
+  // Sends a logged match to the operator's own MockAPI (or any REST)
+  // endpoint via POST. Falls back to the local per-browser log (same as
+  // before this feature existed) if no endpoint is configured, or if the
+  // request fails for any reason (offline, wrong URL, MockAPI down, etc.)
+  // — so a match is never silently lost.
+  function logMatchResult(config, state) {
+    const entry = {
+      id: 'm-' + Date.now(),
+      timestamp: new Date().toISOString(),
+      t1: config.t1,
+      t2: config.t2,
+      s1: state.s1,
+      s2: state.s2,
+      timerMode: config.timerMode,
+      widgetId: config.widgetId,
+    };
+    if (config.timerMode === 'football') {
+      entry.half1Minutes = Math.round(config.half1Length / 60);
+      entry.half2Minutes = Math.round(config.half2Length / 60);
+      entry.halfReached = state.half;
+      // Per-half stoppage/added time, so both halves are reported even
+      // though the match may have ended in half 2. Falls back to whatever
+      // is currently live if a half's tracked value was never set (older
+      // saved state before this field existed).
+      entry.stoppageHalf1Minutes = state.stoppageHalf1 || 0;
+      entry.stoppageHalf2Minutes = state.stoppageHalf2 || 0;
+      entry.finalClock = formatFootballClock(
+        state.halfElapsedMs,
+        (state.half === 1 ? config.half1Length : config.half2Length) * 1000,
+        state.half === 1 ? 0 : config.half1Length * 1000,
+        state.stoppageClockActive
+      );
+    } else if (config.timerMode === 'countup') {
+      entry.elapsedClock = formatClock(state.elapsedMs);
+    } else if (config.timerMode === 'countdown') {
+      entry.remainingClock = formatClock(state.remainingMs);
+    }
+
+    if (!config.logApi) {
+      saveMatchToLocalLog(entry);
+      return;
+    }
+
+    // MockAPI assigns its own `id` on POST — drop ours so it doesn't clash,
+    // matchlog.html reads whichever `id` comes back from the API.
+    const { id, ...entryForApi } = entry;
+    fetch(config.logApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entryForApi),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+      })
+      .catch((err) => {
+        console.error('[score-core] Failed to log match to', config.logApi, '— saving locally instead.', err);
+        saveMatchToLocalLog(entry);
+      });
   }
 
   // ---------------- persisted state ----------------
@@ -382,7 +434,9 @@ window.ScoreCore = (function () {
       remainingMs: config.duration * 1000, // countdown
       half: 1, // football
       halfElapsedMs: 0, // football
-      stoppageMinutes: 0, // football — announced "+3' added" badge only
+      stoppageMinutes: 0, // football — announced "+3' added" badge, CURRENT half only
+      stoppageHalf1: 0, // football — final stoppage minutes announced in half 1 (kept after switching to half 2)
+      stoppageHalf2: 0, // football — final stoppage minutes announced in half 2
       stoppageClockActive: false, // football — running "+MM:SS" clock on/off
       timerVisible: config.initialTimerVisible,
     };
@@ -581,15 +635,25 @@ window.ScoreCore = (function () {
           state.remainingMs = config.duration * 1000;
           state.halfElapsedMs = 0;
           state.stoppageMinutes = 0;
+          if (state.half === 1) state.stoppageHalf1 = 0;
+          else state.stoppageHalf2 = 0;
           state.stoppageClockActive = false;
           state.lastUpdate = now;
         } else if (action === 'add-stoppage') {
           state.stoppageMinutes += 1;
+          // Mirror the live badge into the per-half tracker so it survives
+          // a "next half" transition (which resets the live badge back to 0).
+          if (state.half === 1) state.stoppageHalf1 = state.stoppageMinutes;
+          else state.stoppageHalf2 = state.stoppageMinutes;
         } else if (action === 'toggle-added-time') {
           state.stoppageClockActive = !state.stoppageClockActive;
         } else if (action === 'next-half') {
           state.half = state.half === 1 ? 2 : 1;
           state.halfElapsedMs = 0;
+          // Reset only the LIVE badge counter for the half we're entering —
+          // stoppageHalf1/stoppageHalf2 (the finalized per-half totals) are
+          // intentionally left untouched so both halves' added time can
+          // still be reported when the match is logged later.
           state.stoppageMinutes = 0;
           state.stoppageClockActive = false;
           state.timerStatus = 'paused';
@@ -608,6 +672,8 @@ window.ScoreCore = (function () {
           state.half = 1;
           state.halfElapsedMs = 0;
           state.stoppageMinutes = 0;
+          state.stoppageHalf1 = 0;
+          state.stoppageHalf2 = 0;
           state.stoppageClockActive = false;
           state.lastUpdate = now;
         }
