@@ -286,6 +286,10 @@ window.ScoreCore = (function () {
         <button type="button" class="ctrl-btn ctrl-score-plus" data-action="s2-plus" title="+1">&#43;</button>
       </div>
       <button type="button" class="ctrl-btn ctrl-score-reset" data-action="reset-scores" title="Reset scores">&#8635;</button>
+      <span class="ctrl-divider"></span>
+      <div class="ctrl-cluster">
+        <button type="button" class="ctrl-btn ctrl-log-match" data-action="log-match" title="Log this result &amp; start next match">&#128203;</button>
+      </div>
     `;
 
     if (config.timerMode !== 'off') {
@@ -311,6 +315,55 @@ window.ScoreCore = (function () {
 
     bar.innerHTML = html;
     return bar;
+  }
+
+  // ---------------- match log (shared across all scoreboards in this browser) ----------------
+  // Read/written by every scoreboard widget instance so the operator can
+  // log match after match throughout the day, then print one combined
+  // report from matchlog.html at the end.
+  const MATCH_LOG_KEY = 'sb-matchlog';
+
+  function logMatchResult(config, state) {
+    let entry = {
+      id: 'm-' + Date.now(),
+      timestamp: new Date().toISOString(),
+      t1: config.t1,
+      t2: config.t2,
+      s1: state.s1,
+      s2: state.s2,
+      timerMode: config.timerMode,
+      widgetId: config.widgetId,
+    };
+    if (config.timerMode === 'football') {
+      entry.half1Minutes = Math.round(config.half1Length / 60);
+      entry.half2Minutes = Math.round(config.half2Length / 60);
+      entry.halfReached = state.half;
+      entry.stoppageMinutesAnnounced = state.stoppageMinutes;
+      entry.finalClock = formatFootballClock(
+        state.halfElapsedMs,
+        (state.half === 1 ? config.half1Length : config.half2Length) * 1000,
+        state.half === 1 ? 0 : config.half1Length * 1000,
+        state.stoppageClockActive
+      );
+    } else if (config.timerMode === 'countup') {
+      entry.elapsedClock = formatClock(state.elapsedMs);
+    } else if (config.timerMode === 'countdown') {
+      entry.remainingClock = formatClock(state.remainingMs);
+    }
+
+    let list = [];
+    try {
+      const raw = window.localStorage.getItem(MATCH_LOG_KEY);
+      list = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      list = [];
+    }
+    list.push(entry);
+    try {
+      window.localStorage.setItem(MATCH_LOG_KEY, JSON.stringify(list));
+    } catch (e) {
+      /* ignore — logging just won't persist */
+    }
   }
 
   // ---------------- persisted state ----------------
@@ -460,6 +513,17 @@ window.ScoreCore = (function () {
       }
     }
 
+    function flashLogged(btn) {
+      if (!btn) return;
+      const original = btn.innerHTML;
+      btn.innerHTML = '&#10003;'; // checkmark
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.disabled = false;
+      }, 1200);
+    }
+
     function updateControlsUI() {
       if (!controlsBar) return;
       const playBtn = controlsBar.querySelector('.ctrl-play');
@@ -532,6 +596,20 @@ window.ScoreCore = (function () {
           state.lastUpdate = now;
         } else if (action === 'toggle-timer-visible') {
           state.timerVisible = !state.timerVisible;
+        } else if (action === 'log-match') {
+          logMatchResult(config, state);
+          flashLogged(btn);
+          // ready the board for the next match
+          state.s1 = config.s1;
+          state.s2 = config.s2;
+          state.timerStatus = 'paused';
+          state.elapsedMs = 0;
+          state.remainingMs = config.duration * 1000;
+          state.half = 1;
+          state.halfElapsedMs = 0;
+          state.stoppageMinutes = 0;
+          state.stoppageClockActive = false;
+          state.lastUpdate = now;
         }
 
         saveState(config, state);

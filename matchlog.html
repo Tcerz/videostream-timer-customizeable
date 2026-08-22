@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Match Log — Scoreboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+<style>
+  .log-wrap { max-width: 1000px; margin: 0 auto; padding: 24px; }
+  .log-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+  .log-toolbar .spacer { flex: 1; }
+  table.log-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+  table.log-table th, table.log-table td {
+    border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top;
+  }
+  table.log-table th { background: var(--panel-raised); color: var(--text-dim); font-weight: 600; }
+  table.log-table td.score { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .empty-state { color: var(--text-dim); padding: 40px 0; text-align: center; }
+  .row-actions button { border: none; background: none; color: var(--red); cursor: pointer; font-size: 12px; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .breadcrumb, .log-toolbar, .row-actions, .masthead { display: none !important; }
+    table.log-table th { background: #eee !important; -webkit-print-color-adjust: exact; }
+    table.log-table, table.log-table th, table.log-table td { border-color: #999 !important; color: #000 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="scorestream.html">&larr; Back to Scoreboard builder</a>
+</div>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="masthead-title">
+      <h1>MATCH LOG</h1>
+      <p>Every match logged from any Scoreboard widget in this browser, in one printable report</p>
+    </div>
+  </div>
+</header>
+
+<div class="log-wrap">
+  <div class="log-toolbar">
+    <button class="btn-primary" id="printBtn">&#128424; Print / Save as PDF</button>
+    <button class="btn-ghost" id="exportCsvBtn">&#8681; Export CSV</button>
+    <span class="spacer"></span>
+    <button class="btn-ghost" id="clearBtn">Clear log (start a new day)</button>
+  </div>
+
+  <div id="tableHost"></div>
+</div>
+
+<script>
+(function () {
+  const MATCH_LOG_KEY = 'sb-matchlog';
+
+  function loadLog() {
+    try {
+      const raw = window.localStorage.getItem(MATCH_LOG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLog(list) {
+    try {
+      window.localStorage.setItem(MATCH_LOG_KEY, JSON.stringify(list));
+    } catch (e) { /* ignore */ }
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString();
+  }
+
+  function detailsFor(entry) {
+    if (entry.timerMode === 'football') {
+      const halves = `${entry.half1Minutes ?? '?'}' / ${entry.half2Minutes ?? '?'}' halves`;
+      const reached = `ended in half ${entry.halfReached ?? '?'} at ${entry.finalClock ?? '—'}`;
+      const stoppage = entry.stoppageMinutesAnnounced ? `, +${entry.stoppageMinutesAnnounced}' announced` : '';
+      return `${halves} — ${reached}${stoppage}`;
+    }
+    if (entry.timerMode === 'countup') return `stopwatch, stopped at ${entry.elapsedClock ?? '—'}`;
+    if (entry.timerMode === 'countdown') return `countdown, ${entry.remainingClock ?? '—'} left`;
+    return 'no timer';
+  }
+
+  function render() {
+    const list = loadLog().slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const host = document.getElementById('tableHost');
+
+    if (!list.length) {
+      host.innerHTML = '<p class="empty-state">No matches logged yet. On each Scoreboard widget, click the &#128203; button on its control bar once a match finishes to add it here.</p>';
+      return;
+    }
+
+    const rows = list.map((entry, i) => `
+      <tr data-id="${entry.id}">
+        <td>${i + 1}</td>
+        <td>${fmtTime(entry.timestamp)}</td>
+        <td>${escapeHtml(entry.t1)}</td>
+        <td class="score">${entry.s1} - ${entry.s2}</td>
+        <td>${escapeHtml(entry.t2)}</td>
+        <td>${escapeHtml(detailsFor(entry))}</td>
+        <td class="row-actions"><button data-del="${entry.id}">Remove</button></td>
+      </tr>
+    `).join('');
+
+    host.innerHTML = `
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Time</th><th>Team 1</th><th>Score</th><th>Team 2</th><th>Details</th><th class="row-actions">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+
+    host.querySelectorAll('[data-del]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-del');
+        saveLog(loadLog().filter((e) => e.id !== id));
+        render();
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+
+  function toCsv(list) {
+    const header = ['#', 'Time', 'Team 1', 'Score 1', 'Score 2', 'Team 2', 'Details'];
+    const lines = [header.join(',')];
+    list.forEach((entry, i) => {
+      const row = [
+        i + 1,
+        fmtTime(entry.timestamp),
+        entry.t1,
+        entry.s1,
+        entry.s2,
+        entry.t2,
+        detailsFor(entry),
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`);
+      lines.push(row.join(','));
+    });
+    return lines.join('\n');
+  }
+
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const list = loadLog().slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (!list.length) return;
+    const blob = new Blob([toCsv(list)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'match-log-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!loadLog().length) return;
+    if (confirm('Clear all logged matches? This cannot be undone.')) {
+      saveLog([]);
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

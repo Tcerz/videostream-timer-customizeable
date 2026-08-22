@@ -7,6 +7,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/console.css">
+<style>
+  .team-library-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .team-library-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 12px;
+  }
+  .team-library-chip img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+  .team-library-chip button {
+    border: none; background: rgba(255,68,56,0.2); color: #FF4438;
+    width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 1; font-size: 11px;
+  }
+</style>
 </head>
 <body>
 
@@ -34,8 +47,25 @@
 
   <section class="panel controls">
 
+    <div class="strip" id="teamLibraryStrip">
+      <h2 class="strip-title">00 — Team Library <span class="optional">saves you retyping names & re-uploading logos</span></h2>
+      <p class="strip-hint">
+        Save each team here once. For the next match, just pick them from
+        the dropdowns below instead of typing the name and re-uploading
+        the logo again — handy when several teams play throughout the day.
+      </p>
+      <div id="teamLibraryList" class="team-library-list"></div>
+      <p class="strip-hint" id="teamLibraryEmptyHint">No saved teams yet — fill in Team 1 / Team 2 below, then hit "Save to library" under each.</p>
+    </div>
+
     <div class="strip">
       <h2 class="strip-title">01 — Team 1</h2>
+      <label class="field">
+        <span>Load saved team <span class="optional">optional</span></span>
+        <select id="t1LibrarySelect">
+          <option value="">— Type a new team below —</option>
+        </select>
+      </label>
       <label class="field">
         <span>Team name</span>
         <input type="text" id="t1Name" value="Home">
@@ -52,10 +82,17 @@
         <img id="t1LogoPreview" class="logo-preview-img" alt="Team 1 logo preview">
         <button type="button" class="btn-ghost" id="t1LogoClear">Remove logo</button>
       </div>
+      <button type="button" class="btn-ghost" id="t1SaveToLibrary" style="margin-top:10px;">&#128190; Save this team to library</button>
     </div>
 
     <div class="strip">
       <h2 class="strip-title">02 — Team 2</h2>
+      <label class="field">
+        <span>Load saved team <span class="optional">optional</span></span>
+        <select id="t2LibrarySelect">
+          <option value="">— Type a new team below —</option>
+        </select>
+      </label>
       <label class="field">
         <span>Team name</span>
         <input type="text" id="t2Name" value="Away">
@@ -72,6 +109,7 @@
         <img id="t2LogoPreview" class="logo-preview-img" alt="Team 2 logo preview">
         <button type="button" class="btn-ghost" id="t2LogoClear">Remove logo</button>
       </div>
+      <button type="button" class="btn-ghost" id="t2SaveToLibrary" style="margin-top:10px;">&#128190; Save this team to library</button>
     </div>
 
     <div class="strip">
@@ -256,6 +294,18 @@
       </div>
       <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
       <p class="strip-hint" id="urlLengthHint" style="margin-top:10px; margin-bottom:0;"></p>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">End of day</h2>
+      <p class="strip-hint">
+        Click "&#128203; Log this result" on the widget's own control bar
+        after each match finishes — it saves that match's final score and
+        time to this browser, then clears the board for the next match.
+        Once every match of the day is logged, open the recap page below
+        to review and print everything in one go.
+      </p>
+      <a class="btn-ghost" href="matchlog.html" target="_blank" style="display:inline-block; text-decoration:none;">&#128203; Open Match Log &amp; Print</a>
     </div>
 
     <div class="strip howto">

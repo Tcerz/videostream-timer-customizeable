@@ -3,6 +3,8 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   const els = {
+    t1LibrarySelect: $('#t1LibrarySelect'),
+    t1SaveToLibrary: $('#t1SaveToLibrary'),
     t1Name: $('#t1Name'),
     t1Score: $('#t1Score'),
     t1Logo: $('#t1Logo'),
@@ -14,6 +16,8 @@
     t1BgColor: $('#t1BgColor'),
     t1ScoreColor: $('#t1ScoreColor'),
 
+    t2LibrarySelect: $('#t2LibrarySelect'),
+    t2SaveToLibrary: $('#t2SaveToLibrary'),
     t2Name: $('#t2Name'),
     t2Score: $('#t2Score'),
     t2Logo: $('#t2Logo'),
@@ -41,6 +45,8 @@
     timerVisibleHint: $('#timerVisibleHint'),
 
     templateGallery: $('#templateGallery'),
+    teamLibraryList: $('#teamLibraryList'),
+    teamLibraryEmptyHint: $('#teamLibraryEmptyHint'),
 
     scale: $('#scale'),
     scaleValue: $('#scaleValue'),
@@ -60,6 +66,144 @@
   let selectedTemplate = '1';
   let logo1DataUrl = '';
   let logo2DataUrl = '';
+
+  // ---------- team library (saved teams, so you don't retype/re-upload) ----------
+  const TEAM_LIBRARY_KEY = 'sb-team-library';
+
+  function loadTeamLibrary() {
+    try {
+      const raw = window.localStorage.getItem(TEAM_LIBRARY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveTeamLibrary(list) {
+    try {
+      window.localStorage.setItem(TEAM_LIBRARY_KEY, JSON.stringify(list));
+    } catch (e) {
+      /* ignore — library just won't persist */
+    }
+  }
+
+  function upsertTeam(entry) {
+    const list = loadTeamLibrary();
+    const idx = list.findIndex((t) => t.name.toLowerCase() === entry.name.toLowerCase());
+    if (idx >= 0) list[idx] = entry;
+    else list.push(entry);
+    saveTeamLibrary(list);
+    renderTeamLibrary();
+  }
+
+  function deleteTeam(id) {
+    const list = loadTeamLibrary().filter((t) => t.id !== id);
+    saveTeamLibrary(list);
+    renderTeamLibrary();
+  }
+
+  function renderTeamLibrary() {
+    const list = loadTeamLibrary();
+
+    // the chips row (with a small delete button on each)
+    els.teamLibraryList.innerHTML = '';
+    els.teamLibraryEmptyHint.style.display = list.length ? 'none' : '';
+    list.forEach((team) => {
+      const chip = document.createElement('div');
+      chip.className = 'team-library-chip';
+      chip.innerHTML = `
+        ${team.logo ? `<img src="${team.logo}" alt="">` : ''}
+        <span>${team.name.replace(/</g, '&lt;')}</span>
+        <button type="button" title="Delete from library">&#10005;</button>
+      `;
+      chip.querySelector('button').addEventListener('click', () => deleteTeam(team.id));
+      els.teamLibraryList.appendChild(chip);
+    });
+
+    // the two "load saved team" dropdowns
+    [els.t1LibrarySelect, els.t2LibrarySelect].forEach((select) => {
+      const current = select.value;
+      select.innerHTML = '<option value="">— Type a new team below —</option>';
+      list.forEach((team) => {
+        const opt = document.createElement('option');
+        opt.value = team.id;
+        opt.textContent = team.name;
+        select.appendChild(opt);
+      });
+      if (list.some((t) => t.id === current)) select.value = current;
+    });
+  }
+
+  function applyTeamToSlot(team, slot) {
+    if (slot === 1) {
+      els.t1Name.value = team.name;
+      els.t1LogoColor.value = team.logoColor || els.t1LogoColor.value;
+      els.t1BgColor.value = team.bgColor || els.t1BgColor.value;
+      els.t1ScoreColor.value = team.scoreColor || els.t1ScoreColor.value;
+      logo1DataUrl = team.logo || '';
+      if (logo1DataUrl) {
+        els.t1LogoPreview.src = logo1DataUrl;
+        els.t1LogoPreviewRow.style.display = 'flex';
+      } else {
+        els.t1LogoPreviewRow.style.display = 'none';
+      }
+      els.t1Logo.value = '';
+    } else {
+      els.t2Name.value = team.name;
+      els.t2LogoColor.value = team.logoColor || els.t2LogoColor.value;
+      els.t2BgColor.value = team.bgColor || els.t2BgColor.value;
+      els.t2ScoreColor.value = team.scoreColor || els.t2ScoreColor.value;
+      logo2DataUrl = team.logo || '';
+      if (logo2DataUrl) {
+        els.t2LogoPreview.src = logo2DataUrl;
+        els.t2LogoPreviewRow.style.display = 'flex';
+      } else {
+        els.t2LogoPreviewRow.style.display = 'none';
+      }
+      els.t2Logo.value = '';
+    }
+    update();
+  }
+
+  function wireTeamLibrary() {
+    els.t1LibrarySelect.addEventListener('change', () => {
+      const id = els.t1LibrarySelect.value;
+      if (!id) return;
+      const team = loadTeamLibrary().find((t) => t.id === id);
+      if (team) applyTeamToSlot(team, 1);
+    });
+    els.t2LibrarySelect.addEventListener('change', () => {
+      const id = els.t2LibrarySelect.value;
+      if (!id) return;
+      const team = loadTeamLibrary().find((t) => t.id === id);
+      if (team) applyTeamToSlot(team, 2);
+    });
+
+    els.t1SaveToLibrary.addEventListener('click', () => {
+      const name = els.t1Name.value.trim();
+      if (!name) { alert('Give the team a name first.'); return; }
+      upsertTeam({
+        id: 't-' + Date.now(),
+        name,
+        logo: logo1DataUrl,
+        logoColor: els.t1LogoColor.value,
+        bgColor: els.t1BgColor.value,
+        scoreColor: els.t1ScoreColor.value,
+      });
+    });
+    els.t2SaveToLibrary.addEventListener('click', () => {
+      const name = els.t2Name.value.trim();
+      if (!name) { alert('Give the team a name first.'); return; }
+      upsertTeam({
+        id: 't-' + Date.now(),
+        name,
+        logo: logo2DataUrl,
+        logoColor: els.t2LogoColor.value,
+        bgColor: els.t2BgColor.value,
+        scoreColor: els.t2ScoreColor.value,
+      });
+    });
+  }
 
   const MAX_LOGO_DIMENSION = 100; // px — keeps the encoded link a reasonable length
   const LOGO_JPEG_QUALITY = 0.82;
@@ -313,5 +457,7 @@
 
   buildGallery();
   bindEvents();
+  wireTeamLibrary();
+  renderTeamLibrary();
   update();
 })();
