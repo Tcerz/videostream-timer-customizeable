@@ -241,36 +241,94 @@ newer CEF versions support it better).
 
 ---
 
-# Scoreboard — team vs. team overlay with a match timer
+# Scoreboard — team vs. team overlay with a match clock
 
 `scorestream.html` (builder) and `score.html` (overlay) — a two-team score
-display with logos, a name, a live score, and an optional match timer.
-Built for football/futsal, basketball, or any versus-style match, but works
-for any two-side score.
+display with logos, a live score, and an optional match clock, laid out
+like a real broadcast scoreboard. Built for football/futsal, basketball, or
+any versus-style match.
 
 ## Layout
 
 ```
-[logo]  Team 1 name   [score]
-[logo]  Team 2 name   [score]
-[         match timer         ]   (only if a timer mode is enabled)
+[logo] Team 1 name    score1 - score2    Team 2 name [logo]
+[                    match clock                        ]   (optional, toggleable)
 ```
 
 If you don't upload a logo for a team, it shows a colored circle with that
 team's initials instead — so it still looks finished without any image.
 
-## Updating the score live from vMix/OBS
+## Team colors
 
-Same approach as the Timer widget's Play/Pause/Reset:
+Each team has three independent colors, so you're never stuck with the
+score text becoming invisible against its own background:
 
-1. Leave **"Show on-widget score/timer buttons"** checked in the builder.
+- **Logo badge** — background of the initials circle (when no logo image is set)
+- **Background** — that team's half of the scoreboard bar
+- **Score text** — color of that team's score number
+
+Pick a template first for a matching starting palette, then adjust any of
+the six colors freely; "Reset to template colors" puts it back.
+
+## Football match clock (2 halves + stoppage time)
+
+A real football/soccer match is 90 minutes, played as two 45-minute
+halves, with a variable amount of stoppage time added at the referee's
+discretion at the end of each half. Selecting **"Football match"** as the
+timer type gives you exactly that:
+
+- Each half is its own stopwatch, starting at 0:00.
+- Minutes per half is configurable (default 45).
+- Once a half passes its configured length, the clock automatically
+  switches to broadcast-style display, e.g. `45:00+01:12`.
+- The **+1′** button on the widget lets you announce stoppage time live
+  (shows a small "+3′ added" badge) — same as a real broadcast graphic,
+  independent of the running clock itself.
+- The **⇥** (next half) button ends the current half and starts the next
+  one, resetting the clock and stoppage badge; pressing it again after the
+  2nd half cycles back to the 1st half, ready for the next match.
+
+The other timer types (simple stopwatch, or a countdown for basketball-style
+period clocks) are still available if football's specific 2-half format
+isn't what you need.
+
+## Showing/hiding the clock live
+
+The match clock has its own show/hide toggle button (the eye icon) right
+on the widget — click it to hide the clock under the scoreboard (e.g.
+between matches or during a break) without hiding the score. It's
+controllable the same way as everything else: enable mouse input on the
+browser source and click it directly from vMix/OBS.
+
+## Resizing without it turning pixelated
+
+Same approach as the Timer & Clock widget: all sizing is in `vmin` rather
+than fixed pixels, with on-widget **−/⟲/+** buttons. Set the browser
+source's own Width/Height to the size you actually need, then fine-tune
+with the resize buttons — it stays sharp at any size because it re-renders,
+rather than being stretched from a smaller image.
+
+## Controlling everything live from vMix/OBS
+
+Same approach as the Timer widget's Play/Pause/Reset — one control bar
+under the scoreboard with:
+
+- **+ / −** per team to update the score
+- **⟲** to reset both scores
+- **−/⟲/+** to resize the whole scoreboard
+- **▶ / ❚❚ / ⟲** to play/pause/reset the match clock (if a timer is enabled)
+- **+1′** and **⇥** for football's stoppage time / next half (football mode only)
+- **👁** to show/hide the clock
+
+1. Leave **"Show on-widget buttons"** checked in the builder.
 2. In vMix: right-click the Web Browser input → enable mouse/keyboard
    input. In OBS: right-click the Browser source → **Interact**.
-3. Click **+ / −** under each team's name to update their score live, and
-   Play/Pause/Reset for the match timer if you enabled one.
+3. Click any button to update live.
 
-Score and timer state is remembered by the browser the widget runs in, so
-reloading that browser source resumes from where you left off.
+Score, clock, half, stoppage time, size, and show/hide state are all
+remembered by the browser the widget runs in, so reloading that browser
+source resumes right where you left off — no need to reopen the builder
+mid-match.
 
 ## About the logo upload
 
@@ -290,12 +348,17 @@ source image.
 | `t1`, `t2` | text | team names, default `Team 1` / `Team 2` |
 | `s1`, `s2` | number | starting score, default `0` |
 | `logo1`, `logo2` | data URI | team logo image, built automatically by the builder |
+| `t1logo`, `t1bg`, `t1score` | hex color | team 1's logo badge / background / score text colors |
+| `t2logo`, `t2bg`, `t2score` | hex color | team 2's logo badge / background / score text colors |
 | `template` | `1`–`6` | built-in layout, see below |
-| `c1`, `c2` | hex color | override each team's accent color |
 | `css` | base64 text | custom CSS, applied after the template |
-| `timer` | `off` \| `countup` \| `countdown` | default `off` |
+| `scale` | number | size multiplier, e.g. `0.5`–`3`, default `1` |
+| `sizeControls` | `0` | hide the on-widget −/⟲/+ resize buttons |
+| `timer` | `off` \| `football` \| `countup` \| `countdown` | default `off` |
 | `duration` | seconds | starting time for `timer=countdown` |
-| `controls` | `0` | hide the on-widget score/timer buttons |
+| `half` | seconds | length of each half for `timer=football`, default `2700` (45 min) |
+| `timerVisible` | `0` | start with the clock hidden (still toggleable live either way) |
+| `controls` | `0` | hide all on-widget buttons |
 | `id` | text | widget instance name, keeps multiple scoreboards' state separate (default `score`) |
 
 ## Templates

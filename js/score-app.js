@@ -9,8 +9,10 @@
     t1LogoPreviewRow: $('#t1LogoPreviewRow'),
     t1LogoPreview: $('#t1LogoPreview'),
     t1LogoClear: $('#t1LogoClear'),
-    t1Color: $('#t1Color'),
-    t1ColorLabel: $('#t1ColorLabel'),
+    t1ColorTitle: $('#t1ColorTitle'),
+    t1LogoColor: $('#t1LogoColor'),
+    t1BgColor: $('#t1BgColor'),
+    t1ScoreColor: $('#t1ScoreColor'),
 
     t2Name: $('#t2Name'),
     t2Score: $('#t2Score'),
@@ -18,20 +20,31 @@
     t2LogoPreviewRow: $('#t2LogoPreviewRow'),
     t2LogoPreview: $('#t2LogoPreview'),
     t2LogoClear: $('#t2LogoClear'),
-    t2Color: $('#t2Color'),
-    t2ColorLabel: $('#t2ColorLabel'),
+    t2ColorTitle: $('#t2ColorTitle'),
+    t2LogoColor: $('#t2LogoColor'),
+    t2BgColor: $('#t2BgColor'),
+    t2ScoreColor: $('#t2ScoreColor'),
 
     vsChip1: $('#vsChip1'),
     vsChip2: $('#vsChip2'),
-    colorPairSwatches: $('#colorPairSwatches'),
     resetTeamColors: $('#resetTeamColors'),
 
     timerMode: $('#timerMode'),
+    halfLengthWrap: $('#halfLengthWrap'),
+    halfMinutes: $('#halfMinutes'),
     durationWrap: $('#durationWrap'),
     durMinutes: $('#durMinutes'),
     durSeconds: $('#durSeconds'),
+    timerVisibleWrap: $('#timerVisibleWrap'),
+    timerVisibleDefault: $('#timerVisibleDefault'),
+    timerVisibleHint: $('#timerVisibleHint'),
 
     templateGallery: $('#templateGallery'),
+
+    scale: $('#scale'),
+    scaleValue: $('#scaleValue'),
+    sizeControls: $('#sizeControls'),
+
     showControls: $('#showControls'),
     widgetId: $('#widgetId'),
     customCss: $('#customCss'),
@@ -49,31 +62,6 @@
 
   const MAX_LOGO_DIMENSION = 100; // px — keeps the encoded link a reasonable length
   const LOGO_JPEG_QUALITY = 0.82;
-
-  const COLOR_PAIRS = [
-    ['#1E63C9', '#C91E1E'], // blue vs red
-    ['#0B3D0B', '#FFFFFF'], // green vs white
-    ['#111111', '#F5B700'], // black vs gold
-    ['#7A2B7A', '#2B7A6E'], // purple vs teal
-    ['#FF6A00', '#1D3557'], // orange vs navy
-    ['#C91E1E', '#111111'], // red vs black
-  ];
-
-  function buildColorPairSwatches() {
-    COLOR_PAIRS.forEach(([a, b]) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'color-pair-swatch';
-      btn.title = `${a} vs ${b}`;
-      btn.innerHTML = `<span style="background:${a}"></span><span style="background:${b}"></span>`;
-      btn.addEventListener('click', () => {
-        els.t1Color.value = a;
-        els.t2Color.value = b;
-        update();
-      });
-      els.colorPairSwatches.appendChild(btn);
-    });
-  }
 
   // ---------- logo upload -> resized data URL ----------
   function resizeImageFile(file) {
@@ -94,9 +82,6 @@
           ctx.clearRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
 
-          // PNG keeps transparency (most team logos need it); if the
-          // resulting PNG is unusually large, fall back to JPEG which
-          // compresses much better for photographic/complex logos.
           let dataUrl = canvas.toDataURL('image/png');
           if (dataUrl.length > 40000) {
             dataUrl = canvas.toDataURL('image/jpeg', LOGO_JPEG_QUALITY);
@@ -144,15 +129,18 @@
       card.innerHTML = `
         <div class="tpl-frame template-${id}">
           <div class="scoreboard-wrap">
-            <div class="team-row" data-team="1">
+            <div class="team-block" data-team="1">
               <div class="logo-fallback">HM</div>
               <div class="team-name">Home</div>
-              <div class="team-score">2</div>
             </div>
-            <div class="team-row" data-team="2">
+            <div class="score-block">
+              <div class="team-score" data-team="1">2</div>
+              <div class="score-sep">-</div>
+              <div class="team-score" data-team="2">1</div>
+            </div>
+            <div class="team-block" data-team="2">
               <div class="logo-fallback">AW</div>
               <div class="team-name">Away</div>
-              <div class="team-score">1</div>
             </div>
           </div>
         </div>
@@ -173,8 +161,22 @@
   function applyTemplateDefaultColors(id) {
     const tpl = window.SCORE_TEMPLATES[id];
     if (!tpl || !tpl.colors) return;
-    els.t1Color.value = tpl.colors.c1;
-    els.t2Color.value = tpl.colors.c2;
+    els.t1LogoColor.value = tpl.colors.t1logo;
+    els.t1BgColor.value = tpl.colors.t1bg;
+    els.t1ScoreColor.value = tpl.colors.t1score;
+    els.t2LogoColor.value = tpl.colors.t2logo;
+    els.t2BgColor.value = tpl.colors.t2bg;
+    els.t2ScoreColor.value = tpl.colors.t2score;
+  }
+
+  // ---------- timer mode visibility ----------
+  function refreshTimerVisibility() {
+    const mode = els.timerMode.value;
+    els.halfLengthWrap.style.display = mode === 'football' ? '' : 'none';
+    els.durationWrap.style.display = mode === 'countdown' ? '' : 'none';
+    const hasTimer = mode !== 'off';
+    els.timerVisibleWrap.style.display = hasTimer ? '' : 'none';
+    els.timerVisibleHint.style.display = hasTimer ? '' : 'none';
   }
 
   // ---------- build params + preview ----------
@@ -190,12 +192,19 @@
 
     params.set('template', selectedTemplate);
     const tplDefaults = window.SCORE_TEMPLATES[selectedTemplate].colors || {};
-    if (els.t1Color.value && els.t1Color.value.toLowerCase() !== (tplDefaults.c1 || '').toLowerCase()) {
-      params.set('c1', els.t1Color.value);
-    }
-    if (els.t2Color.value && els.t2Color.value.toLowerCase() !== (tplDefaults.c2 || '').toLowerCase()) {
-      params.set('c2', els.t2Color.value);
-    }
+    const colorFields = [
+      ['t1logo', els.t1LogoColor, tplDefaults.t1logo],
+      ['t1bg', els.t1BgColor, tplDefaults.t1bg],
+      ['t1score', els.t1ScoreColor, tplDefaults.t1score],
+      ['t2logo', els.t2LogoColor, tplDefaults.t2logo],
+      ['t2bg', els.t2BgColor, tplDefaults.t2bg],
+      ['t2score', els.t2ScoreColor, tplDefaults.t2score],
+    ];
+    colorFields.forEach(([key, input, defaultVal]) => {
+      if (input.value && defaultVal && input.value.toLowerCase() !== defaultVal.toLowerCase()) {
+        params.set(key, input.value);
+      }
+    });
 
     const timerMode = els.timerMode.value;
     if (timerMode !== 'off') {
@@ -204,14 +213,21 @@
         const m = parseInt(els.durMinutes.value, 10) || 0;
         const s = parseInt(els.durSeconds.value, 10) || 0;
         params.set('duration', String(m * 60 + s));
+      } else if (timerMode === 'football') {
+        const halfMin = parseInt(els.halfMinutes.value, 10) || 45;
+        params.set('half', String(halfMin * 60));
       }
+      if (!els.timerVisibleDefault.checked) params.set('timerVisible', '0');
     }
+
+    const scaleVal = parseFloat(els.scale.value);
+    if (Math.abs(scaleVal - 1) > 0.001) params.set('scale', String(scaleVal));
+    if (!els.sizeControls.checked) params.set('sizeControls', '0');
 
     if (!els.showControls.checked) params.set('controls', '0');
     params.set('id', els.widgetId.value.trim() || 'score-1');
 
     if (els.customCss.value.trim()) {
-      // reuse the same base64 helper pattern as the Timer widget
       const bytes = new TextEncoder().encode(els.customCss.value);
       let binary = '';
       bytes.forEach((b) => (binary += String.fromCharCode(b)));
@@ -221,23 +237,22 @@
     return params;
   }
 
-  function refreshTimerVisibility() {
-    els.durationWrap.style.display = els.timerMode.value === 'countdown' ? '' : 'none';
-  }
-
   let debounceTimer = null;
   function update() {
     refreshTimerVisibility();
+    els.scaleValue.textContent = Math.round(parseFloat(els.scale.value) * 100) + '%';
 
     // live "vs" preview + labels
     const t1Name = els.t1Name.value.trim() || 'Team 1';
     const t2Name = els.t2Name.value.trim() || 'Team 2';
-    els.t1ColorLabel.textContent = t1Name;
-    els.t2ColorLabel.textContent = t2Name;
+    els.t1ColorTitle.textContent = t1Name;
+    els.t2ColorTitle.textContent = t2Name;
     els.vsChip1.textContent = t1Name;
     els.vsChip2.textContent = t2Name;
-    els.vsChip1.style.background = els.t1Color.value;
-    els.vsChip2.style.background = els.t2Color.value;
+    els.vsChip1.style.background = els.t1BgColor.value;
+    els.vsChip1.style.color = els.t1ScoreColor.value;
+    els.vsChip2.style.background = els.t2BgColor.value;
+    els.vsChip2.style.color = els.t2ScoreColor.value;
 
     const params = buildParams();
     const base = window.location.href.replace(/[^/]*$/, '') + 'score.html';
@@ -259,9 +274,13 @@
 
   function bindEvents() {
     [
-      els.t1Name, els.t1Score, els.t1Color,
-      els.t2Name, els.t2Score, els.t2Color,
-      els.timerMode, els.durMinutes, els.durSeconds,
+      els.t1Name, els.t1Score,
+      els.t1LogoColor, els.t1BgColor, els.t1ScoreColor,
+      els.t2Name, els.t2Score,
+      els.t2LogoColor, els.t2BgColor, els.t2ScoreColor,
+      els.timerMode, els.halfMinutes, els.durMinutes, els.durSeconds,
+      els.timerVisibleDefault,
+      els.scale, els.sizeControls,
       els.showControls, els.widgetId, els.customCss,
     ].forEach((el) => {
       el.addEventListener('input', update);
@@ -289,7 +308,6 @@
   }
 
   buildGallery();
-  buildColorPairSwatches();
   bindEvents();
   update();
 })();

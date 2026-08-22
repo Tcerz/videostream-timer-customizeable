@@ -354,7 +354,7 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 8px;
 }
 
-.tpl-frame .timer-wrap { transform: scale(.34); transform-origin: center; white-space: nowrap; }
+.tpl-frame .timer-wrap, .tpl-frame .scoreboard-wrap { transform: scale(.34); transform-origin: center; white-space: nowrap; }
 
 .tpl-name {
   font-size: 11px;
@@ -713,25 +713,44 @@ input[type="range"] {
    Scoreboard builder — Team Colors section
    ========================================================================== */
 
-.team-color-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.team-color-block {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
   margin-bottom: 12px;
 }
 
-.team-color-row .color-field {
-  margin-bottom: 0;
-}
-
-.team-color-name {
+.team-color-block-title {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
-  color: var(--text-dim);
+  letter-spacing: .5px;
+  color: var(--text);
+  margin-bottom: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+}
+
+.color-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.color-trio .color-field {
+  margin-bottom: 0;
+}
+
+.color-trio .color-field span {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.color-trio .color-field input[type="color"] {
+  width: 100%;
 }
 
 .color-vs-preview {
@@ -750,7 +769,6 @@ input[type="range"] {
   text-align: center;
   padding: 10px 8px;
   border-radius: 6px;
-  color: #ffffff;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
   font-weight: 700;
@@ -765,28 +783,4 @@ input[type="range"] {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 1px;
-}
-
-.color-pair-swatches {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.color-pair-swatch {
-  display: flex;
-  height: 26px;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  padding: 0;
-  background: none;
-}
-
-.color-pair-swatch:hover { border-color: var(--text-dim); }
-
-.color-pair-swatch span {
-  flex: 1;
-  display: block;
 }
