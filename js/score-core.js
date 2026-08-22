@@ -49,6 +49,12 @@
  *                           live state separate from any other instance,
  *                           default "score"
  *
+ *   The ⇆ "swap sides" button (always shown alongside the score controls)
+ *   flips which side each team is displayed on — e.g. real teams switch
+ *   ends at half-time — while keeping each team's score, logo, and colors
+ *   correctly attached to that team no matter which side it's on. The +/-
+ *   score buttons always control the same real team regardless of side.
+ *
  *   -- match log --
  *   logApi                  optional MockAPI (or any REST) resource URL,
  *                           e.g. https://<project-id>.mockapi.io/matchlog
@@ -159,18 +165,11 @@ window.ScoreCore = (function () {
 
     document.body.className = 'template-' + config.template;
 
-    const defaults = (tpl && tpl.colors) || {};
-    const map = {
-      '--t1-logo': config.t1logo || defaults.t1logo,
-      '--t1-bg': config.t1bg || defaults.t1bg,
-      '--t1-score': config.t1score || defaults.t1score,
-      '--t2-logo': config.t2logo || defaults.t2logo,
-      '--t2-bg': config.t2bg || defaults.t2bg,
-      '--t2-score': config.t2score || defaults.t2score,
-    };
-    Object.keys(map).forEach((k) => {
-      if (map[k]) document.body.style.setProperty(k, map[k]);
-    });
+    // Team colors (--t1-logo/-bg/-score, --t2-logo/-bg/-score) are NOT set
+    // here anymore — they depend on which team currently occupies which
+    // slot (see applyTeamVisuals), which in turn depends on `state`
+    // (state.reversed). applyCss() runs before state is loaded, so that
+    // part is handled later, in renderTeamContent()/applyTeamVisuals().
 
     let customTag = document.getElementById('custom-style');
     if (!customTag) {
@@ -187,32 +186,73 @@ window.ScoreCore = (function () {
 
   // ---------------- DOM building ----------------
 
-  function buildTeamBlock(config, teamNum) {
-    const name = teamNum === 1 ? config.t1 : config.t2;
-    const logo = teamNum === 1 ? config.logo1 : config.logo2;
+  // A "slot" is a fixed layout position (1 = left/first, 2 = right/second)
+  // that the CSS templates style directly via [data-team="1"/"2"]. Which
+  // REAL team (config.t1's data vs config.t2's data) currently occupies a
+  // given slot depends on state.reversed — flipped every time the operator
+  // presses the ⇆ "swap sides" button. Scores (state.s1/s2) always stay
+  // attached to the real team, never to a slot.
+  function effectiveTeamForSlot(state, position) {
+    if (!state.reversed) return position;
+    return position === 1 ? 2 : 1;
+  }
 
+  function teamColor(config, tpl, teamNum, key) {
+    const defaults = (tpl && tpl.colors) || {};
+    return config['t' + teamNum + key] || defaults['t' + teamNum + key] || '';
+  }
+
+  // Re-points each slot's --t{position}-logo/-bg/-score CSS variables at
+  // whichever real team currently occupies that slot, so a swapped team
+  // keeps its own colors instead of inheriting the slot's original ones.
+  function applyTeamVisuals(config, state) {
+    const tpl = window.SCORE_TEMPLATES ? window.SCORE_TEMPLATES[config.template] : null;
+    [1, 2].forEach((position) => {
+      const teamNum = effectiveTeamForSlot(state, position);
+      ['logo', 'bg', 'score'].forEach((key) => {
+        const val = teamColor(config, tpl, teamNum, key);
+        if (val) document.body.style.setProperty('--t' + position + '-' + key, val);
+      });
+    });
+  }
+
+  // Fills each slot's logo (or initials fallback) and name with whichever
+  // real team currently occupies it. Called on first render and again
+  // every time the teams are swapped.
+  function renderTeamContent(config, state, wrap) {
+    [1, 2].forEach((position) => {
+      const teamNum = effectiveTeamForSlot(state, position);
+      const name = teamNum === 1 ? config.t1 : config.t2;
+      const logo = teamNum === 1 ? config.logo1 : config.logo2;
+      const block = wrap.querySelector('.team-block[data-team="' + position + '"]');
+      if (!block) return;
+      block.innerHTML = '';
+      if (logo) {
+        const img = document.createElement('img');
+        img.className = 'team-logo';
+        img.src = logo;
+        img.alt = name;
+        block.appendChild(img);
+      } else {
+        const fallback = document.createElement('div');
+        fallback.className = 'logo-fallback';
+        fallback.textContent = initials(name);
+        block.appendChild(fallback);
+      }
+      const nameEl = document.createElement('div');
+      nameEl.className = 'team-name';
+      nameEl.textContent = name;
+      block.appendChild(nameEl);
+    });
+    applyTeamVisuals(config, state);
+  }
+
+  function buildTeamBlock(position) {
     const block = document.createElement('div');
     block.className = 'team-block';
-    block.dataset.team = String(teamNum);
-
-    if (logo) {
-      const img = document.createElement('img');
-      img.className = 'team-logo';
-      img.src = logo;
-      img.alt = name;
-      block.appendChild(img);
-    } else {
-      const fallback = document.createElement('div');
-      fallback.className = 'logo-fallback';
-      fallback.textContent = initials(name);
-      block.appendChild(fallback);
-    }
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'team-name';
-    nameEl.textContent = name;
-    block.appendChild(nameEl);
-
+    block.dataset.team = String(position);
+    // Logo/name are filled in later by renderTeamContent(), once state
+    // (and therefore whether teams are swapped) is known.
     return block;
   }
 
@@ -220,7 +260,7 @@ window.ScoreCore = (function () {
     const wrap = document.createElement('div');
     wrap.className = 'scoreboard-wrap';
 
-    wrap.appendChild(buildTeamBlock(config, 1));
+    wrap.appendChild(buildTeamBlock(1));
 
     const scoreBlock = document.createElement('div');
     scoreBlock.className = 'score-block';
@@ -240,7 +280,7 @@ window.ScoreCore = (function () {
     scoreBlock.appendChild(s2);
     wrap.appendChild(scoreBlock);
 
-    wrap.appendChild(buildTeamBlock(config, 2));
+    wrap.appendChild(buildTeamBlock(2));
 
     return wrap;
   }
@@ -305,6 +345,7 @@ window.ScoreCore = (function () {
         <button type="button" class="ctrl-btn ctrl-score-plus" data-action="s2-plus" title="+1">&#43;</button>
       </div>
       <button type="button" class="ctrl-btn ctrl-score-reset" data-action="reset-scores" title="Reset scores">&#8635;</button>
+      <button type="button" class="ctrl-btn ctrl-reverse" data-action="reverse-teams" title="Swap team sides (e.g. at half-time) — scores stay with their team">&#8646;</button>
       <span class="ctrl-divider"></span>
       <div class="ctrl-cluster">
         <button type="button" class="ctrl-btn ctrl-log-match" data-action="log-match" title="Log this result &amp; start next match">&#128203;</button>
@@ -439,6 +480,7 @@ window.ScoreCore = (function () {
       stoppageHalf2: 0, // football — final stoppage minutes announced in half 2
       stoppageClockActive: false, // football — running "+MM:SS" clock on/off
       timerVisible: config.initialTimerVisible,
+      reversed: false, // true = teams shown swapped left/right (e.g. after half-time)
     };
   }
 
@@ -522,10 +564,11 @@ window.ScoreCore = (function () {
     }
 
     function renderScores() {
-      const s1El = wrap.querySelector('.team-score[data-team="1"]');
-      const s2El = wrap.querySelector('.team-score[data-team="2"]');
-      if (s1El) s1El.textContent = String(state.s1);
-      if (s2El) s2El.textContent = String(state.s2);
+      [1, 2].forEach((position) => {
+        const teamNum = effectiveTeamForSlot(state, position);
+        const el = wrap.querySelector('.team-score[data-team="' + position + '"]');
+        if (el) el.textContent = String(teamNum === 1 ? state.s1 : state.s2);
+      });
     }
 
     function renderTimer() {
@@ -660,25 +703,24 @@ window.ScoreCore = (function () {
           state.lastUpdate = now;
         } else if (action === 'toggle-timer-visible') {
           state.timerVisible = !state.timerVisible;
+        } else if (action === 'reverse-teams') {
+          // Swaps which side of the board each team is shown on — e.g. real
+          // football teams switch ends at half-time. Scores, colors, and
+          // logos all travel WITH their team; only left/right position
+          // changes. The s1/s2 +/- buttons keep controlling the same real
+          // team no matter which side it's currently displayed on.
+          state.reversed = !state.reversed;
         } else if (action === 'log-match') {
           logMatchResult(config, state);
           flashLogged(btn);
-          // ready the board for the next match
-          state.s1 = config.s1;
-          state.s2 = config.s2;
-          state.timerStatus = 'paused';
-          state.elapsedMs = 0;
-          state.remainingMs = config.duration * 1000;
-          state.half = 1;
-          state.halfElapsedMs = 0;
-          state.stoppageMinutes = 0;
-          state.stoppageHalf1 = 0;
-          state.stoppageHalf2 = 0;
-          state.stoppageClockActive = false;
-          state.lastUpdate = now;
+          // NOTE: no auto-reset here — logging just snapshots the current
+          // result. The match keeps going (e.g. still mid-2nd-half), and
+          // the operator already has dedicated reset-scores / reset-timer
+          // buttons for whenever they actually want to start a new match.
         }
 
         saveState(config, state);
+        renderTeamContent(config, state, wrap);
         renderScores();
         renderTimer();
         updateControlsUI();
@@ -705,6 +747,7 @@ window.ScoreCore = (function () {
       updateControlsUI();
     }
 
+    renderTeamContent(config, state, wrap);
     renderScores();
     renderTimer();
     updateControlsUI();
