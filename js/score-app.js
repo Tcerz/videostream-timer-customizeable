@@ -10,6 +10,7 @@
     t1LogoPreview: $('#t1LogoPreview'),
     t1LogoClear: $('#t1LogoClear'),
     t1Color: $('#t1Color'),
+    t1ColorLabel: $('#t1ColorLabel'),
 
     t2Name: $('#t2Name'),
     t2Score: $('#t2Score'),
@@ -18,6 +19,12 @@
     t2LogoPreview: $('#t2LogoPreview'),
     t2LogoClear: $('#t2LogoClear'),
     t2Color: $('#t2Color'),
+    t2ColorLabel: $('#t2ColorLabel'),
+
+    vsChip1: $('#vsChip1'),
+    vsChip2: $('#vsChip2'),
+    colorPairSwatches: $('#colorPairSwatches'),
+    resetTeamColors: $('#resetTeamColors'),
 
     timerMode: $('#timerMode'),
     durationWrap: $('#durationWrap'),
@@ -42,6 +49,31 @@
 
   const MAX_LOGO_DIMENSION = 100; // px — keeps the encoded link a reasonable length
   const LOGO_JPEG_QUALITY = 0.82;
+
+  const COLOR_PAIRS = [
+    ['#1E63C9', '#C91E1E'], // blue vs red
+    ['#0B3D0B', '#FFFFFF'], // green vs white
+    ['#111111', '#F5B700'], // black vs gold
+    ['#7A2B7A', '#2B7A6E'], // purple vs teal
+    ['#FF6A00', '#1D3557'], // orange vs navy
+    ['#C91E1E', '#111111'], // red vs black
+  ];
+
+  function buildColorPairSwatches() {
+    COLOR_PAIRS.forEach(([a, b]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'color-pair-swatch';
+      btn.title = `${a} vs ${b}`;
+      btn.innerHTML = `<span style="background:${a}"></span><span style="background:${b}"></span>`;
+      btn.addEventListener('click', () => {
+        els.t1Color.value = a;
+        els.t2Color.value = b;
+        update();
+      });
+      els.colorPairSwatches.appendChild(btn);
+    });
+  }
 
   // ---------- logo upload -> resized data URL ----------
   function resizeImageFile(file) {
@@ -197,6 +229,16 @@
   function update() {
     refreshTimerVisibility();
 
+    // live "vs" preview + labels
+    const t1Name = els.t1Name.value.trim() || 'Team 1';
+    const t2Name = els.t2Name.value.trim() || 'Team 2';
+    els.t1ColorLabel.textContent = t1Name;
+    els.t2ColorLabel.textContent = t2Name;
+    els.vsChip1.textContent = t1Name;
+    els.vsChip2.textContent = t2Name;
+    els.vsChip1.style.background = els.t1Color.value;
+    els.vsChip2.style.background = els.t2Color.value;
+
     const params = buildParams();
     const base = window.location.href.replace(/[^/]*$/, '') + 'score.html';
     const fullUrl = base + '?' + params.toString();
@@ -229,6 +271,11 @@
     wireLogoInput(els.t1Logo, els.t1LogoPreviewRow, els.t1LogoPreview, els.t1LogoClear, (v) => (logo1DataUrl = v));
     wireLogoInput(els.t2Logo, els.t2LogoPreviewRow, els.t2LogoPreview, els.t2LogoClear, (v) => (logo2DataUrl = v));
 
+    els.resetTeamColors.addEventListener('click', () => {
+      applyTemplateDefaultColors(selectedTemplate);
+      update();
+    });
+
     els.copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(els.outputUrl.value);
@@ -242,6 +289,7 @@
   }
 
   buildGallery();
+  buildColorPairSwatches();
   bindEvents();
   update();
 })();
