@@ -423,7 +423,10 @@ window.ScoreCore = (function () {
 
     function renderTimer() {
       if (!matchInfo) return;
-      matchInfo.style.display = state.timerVisible ? '' : 'none';
+      // visibility (not display) keeps the box's height reserved in the
+      // layout even while hidden, so the scoreboard above/below it never
+      // shifts position when the timer is shown/hidden.
+      matchInfo.style.visibility = state.timerVisible ? '' : 'hidden';
       if (!state.timerVisible) return;
 
       const timerEl = matchInfo.querySelector('.match-timer');
