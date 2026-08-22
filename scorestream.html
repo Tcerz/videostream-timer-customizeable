@@ -52,10 +52,6 @@
         <img id="t1LogoPreview" class="logo-preview-img" alt="Team 1 logo preview">
         <button type="button" class="btn-ghost" id="t1LogoClear">Remove logo</button>
       </div>
-      <label class="field">
-        <span>Accent color</span>
-        <input type="color" id="t1Color">
-      </label>
     </div>
 
     <div class="strip">
@@ -76,14 +72,44 @@
         <img id="t2LogoPreview" class="logo-preview-img" alt="Team 2 logo preview">
         <button type="button" class="btn-ghost" id="t2LogoClear">Remove logo</button>
       </div>
-      <label class="field">
-        <span>Accent color</span>
-        <input type="color" id="t2Color">
-      </label>
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">03 — Match Timer <span class="optional">optional</span></h2>
+      <h2 class="strip-title">03 — Team Colors</h2>
+      <p class="strip-hint">
+        Sets each team's accent color — used for their row highlight, logo
+        badge, and score, in every layout below.
+      </p>
+
+      <div class="team-color-row">
+        <label class="field color-field">
+          <span>Team 1 color</span>
+          <input type="color" id="t1Color">
+        </label>
+        <div class="team-color-name" id="t1ColorLabel">Home</div>
+      </div>
+      <div class="team-color-row">
+        <label class="field color-field">
+          <span>Team 2 color</span>
+          <input type="color" id="t2Color">
+        </label>
+        <div class="team-color-name" id="t2ColorLabel">Away</div>
+      </div>
+
+      <div class="color-vs-preview" id="colorVsPreview">
+        <span class="vs-chip" id="vsChip1">Home</span>
+        <span class="vs-versus">VS</span>
+        <span class="vs-chip" id="vsChip2">Away</span>
+      </div>
+
+      <p class="strip-hint" style="margin:14px 0 8px;">Quick rivalry pairs</p>
+      <div class="color-pair-swatches" id="colorPairSwatches"></div>
+
+      <button type="button" class="btn-ghost" id="resetTeamColors" style="margin-top:12px;">Reset to template colors</button>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">04 — Match Timer <span class="optional">optional</span></h2>
       <label class="field">
         <span>Timer type</span>
         <select id="timerMode">
@@ -104,12 +130,12 @@
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">04 — Style</h2>
+      <h2 class="strip-title">05 — Style</h2>
       <div class="template-gallery" id="templateGallery"></div>
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">05 — Controls</h2>
+      <h2 class="strip-title">06 — Controls</h2>
       <p class="strip-hint">
         Adds +/− score buttons (and Play/Pause/Reset for the timer, if
         enabled) directly under the scoreboard, so you can run the whole
@@ -127,7 +153,7 @@
     </div>
 
     <div class="strip">
-      <h2 class="strip-title">06 — Custom CSS <span class="optional">optional</span></h2>
+      <h2 class="strip-title">07 — Custom CSS <span class="optional">optional</span></h2>
       <p class="strip-hint">
         Overrides the template above. Target: <code>.scoreboard-wrap</code>,
         <code>.team-row</code>, <code>.team-logo</code>, <code>.team-name</code>,
