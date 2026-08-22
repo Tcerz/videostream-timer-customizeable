@@ -688,3 +688,23 @@ input[type="range"] {
   color: var(--text-dim);
   text-align: center;
 }
+
+/* ==========================================================================
+   Scoreboard builder — logo upload preview
+   ========================================================================== */
+
+.logo-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 14px;
+}
+
+.logo-preview-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: repeating-conic-gradient(#2a2e34 0% 25%, #1b1f24 0% 50%) 50% / 12px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
