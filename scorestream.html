@@ -140,19 +140,27 @@
 
       <div id="halfLengthWrap" class="mode-opts" style="display:none">
         <label class="field">
-          <span>Total match length (minutes, both halves combined)</span>
-          <input type="number" id="totalMatchMinutes" min="2" step="1" value="90">
+          <span>1st half length (minutes)</span>
+          <input type="number" id="firstHalfMinutes" min="1" step="1" value="45">
         </label>
-        <p class="strip-hint" id="halfSplitHint">= 45 minutes per half</p>
+        <label class="field">
+          <span>2nd half length (minutes)</span>
+          <input type="number" id="secondHalfMinutes" min="1" step="1" value="45">
+        </label>
         <p class="strip-hint">
-          Enter the FULL match length only (e.g. 90 for a standard match,
-          60 if your organization/league plays shorter halves) — it's
-          automatically split evenly into the two halves for you. Each
-          half starts at 0:00 and counts up; past that length, the clock
-          automatically switches to "45:00+MM:SS" style. Use the +1'
-          button on the widget any time to show an announced stoppage
-          badge (e.g. "+3' added") — this doesn't affect the running clock,
-          it's just the on-screen announcement, same as a real broadcast.
+          Set each half separately — they don't have to match (e.g. 25 for
+          the 1st half and 25 for the 2nd, or any custom split your
+          organization/league uses). Each half starts counting up and, by
+          default, freezes ("pins") at the end of that half — e.g. it
+          stops at the number you set and stays there, just minutes and
+          seconds, no "+" added. Use the stopwatch button (&#9201;) on the
+          widget any time to switch on the running "MM:SS+MM:SS"
+          added-time clock, and press it again to switch it off and pin
+          the display again. When you tap "Next half" (&#8677;), added time
+          turns off automatically and the clock continues straight from
+          the end of the 1st half instead of resetting to 0:00. The +1'
+          button is separate — it only shows an announced "+3' added"
+          badge on screen and never affects the running clock.
         </p>
       </div>
 

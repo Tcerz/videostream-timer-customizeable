@@ -33,8 +33,13 @@
  *   timer                   off | countup | countdown | football
  *                           default: off
  *   duration                seconds, used when timer=countdown
- *   half                    seconds per half, used when timer=football,
- *                           default 2700 (45 minutes)
+ *   half1                   seconds for the 1st half, used when
+ *                           timer=football, default 2700 (45 minutes)
+ *   half2                   seconds for the 2nd half, used when
+ *                           timer=football, default: same as half1
+ *   half                    legacy alias — sets both half1 AND half2 at
+ *                           once (kept for old links). Ignored if half1
+ *                           and/or half2 are present.
  *   timerVisible            0 to start with the timer hidden (still
  *                           toggleable live from vMix/OBS either way)
  *
@@ -82,6 +87,15 @@ window.ScoreCore = (function () {
 
   function loadConfigFromParams(params) {
     const scaleParam = parseFloat(params.get('scale'));
+    const legacyHalf = parseInt(params.get('half'), 10);
+    const half1Param = parseInt(params.get('half1'), 10);
+    const half2Param = parseInt(params.get('half2'), 10);
+    // half1/half2 = length of each half in seconds, set independently by
+    // the operator. Falls back to the legacy single `half` param (applied
+    // to both halves) for old links, then to 45 minutes.
+    const half1Length = !isNaN(half1Param) ? half1Param : (!isNaN(legacyHalf) ? legacyHalf : 2700);
+    const half2Length = !isNaN(half2Param) ? half2Param : half1Length;
+
     return {
       t1: params.get('t1') || 'Team 1',
       t2: params.get('t2') || 'Team 2',
@@ -105,7 +119,8 @@ window.ScoreCore = (function () {
 
       timerMode: params.get('timer') || 'off', // off | countup | countdown | football
       duration: parseInt(params.get('duration'), 10) || 600,
-      halfLength: parseInt(params.get('half'), 10) || 2700, // 45 min
+      half1Length, // seconds, 1st half
+      half2Length, // seconds, 2nd half
       initialTimerVisible: params.get('timerVisible') !== '0',
 
       controlsEnabled: params.get('controls') !== '0',
@@ -285,6 +300,7 @@ window.ScoreCore = (function () {
       if (config.timerMode === 'football') {
         html += `
           <div class="ctrl-cluster">
+            <button type="button" class="ctrl-btn ctrl-added-time" data-action="toggle-added-time" title="Turn running added time on/off">&#9201;</button>
             <button type="button" class="ctrl-btn ctrl-stoppage" data-action="add-stoppage" title="+1' stoppage time">+1&#8242;</button>
             <button type="button" class="ctrl-btn ctrl-next-half" data-action="next-half" title="Next half">&#8677;</button>
           </div>
@@ -313,7 +329,8 @@ window.ScoreCore = (function () {
       remainingMs: config.duration * 1000, // countdown
       half: 1, // football
       halfElapsedMs: 0, // football
-      stoppageMinutes: 0, // football
+      stoppageMinutes: 0, // football — announced "+3' added" badge only
+      stoppageClockActive: false, // football — running "+MM:SS" clock on/off
       timerVisible: config.initialTimerVisible,
     };
   }
@@ -343,12 +360,24 @@ window.ScoreCore = (function () {
     return pad2(m) + ':' + pad2(s);
   }
 
-  // Football display: normal mm:ss up to the half length, then pins the
-  // base at the half length and shows the overflow separately, e.g.
-  // "45:00+01:12" — the standard way stoppage time is shown in broadcasts.
-  function formatFootballClock(elapsedMs, halfLengthMs) {
-    if (elapsedMs <= halfLengthMs) return formatClock(elapsedMs);
-    return formatClock(halfLengthMs) + '+' + formatClock(elapsedMs - halfLengthMs);
+  // Football display, capped style: normal mm:ss counting up from the
+  // start of the match (half 1 begins at 0:00, half 2 continues from the
+  // half length e.g. 45:00, so the clock reads continuously across both
+  // halves like a real broadcast clock). By default it STOPS/pins at the
+  // end of the current half (e.g. "45:00") and never shows a "+" suffix.
+  // Only while `stoppageActive` is manually toggled on does it switch to
+  // the classic "45:00+01:12" overflow style and keep counting past the
+  // half length; turning it back off pins the display again.
+  function formatFootballClock(halfElapsedMs, halfLengthMs, baseOffsetMs, stoppageActive) {
+    if (halfElapsedMs <= halfLengthMs) {
+      return formatClock(baseOffsetMs + halfElapsedMs);
+    }
+    if (!stoppageActive) {
+      // Past the half length but added time isn't turned on: pin the
+      // display at the end of the half instead of rolling over.
+      return formatClock(baseOffsetMs + halfLengthMs);
+    }
+    return formatClock(baseOffsetMs + halfLengthMs) + '+' + formatClock(halfElapsedMs - halfLengthMs);
   }
 
   function start(rootSelector) {
@@ -403,7 +432,17 @@ window.ScoreCore = (function () {
       } else if (config.timerMode === 'countdown') {
         timerEl.textContent = formatClock(state.remainingMs);
       } else if (config.timerMode === 'football') {
-        timerEl.textContent = formatFootballClock(state.halfElapsedMs, config.halfLength);
+        // Half 1 always starts the clock at 0:00. Half 2 continues from
+        // wherever half 1's own length ends (e.g. 25:00 if the operator
+        // set the 1st half to 25 minutes) — not from half 2's own length.
+        const baseOffsetMs = state.half === 1 ? 0 : config.half1Length * 1000;
+        const currentHalfLengthMs = (state.half === 1 ? config.half1Length : config.half2Length) * 1000;
+        timerEl.textContent = formatFootballClock(
+          state.halfElapsedMs,
+          currentHalfLengthMs,
+          baseOffsetMs,
+          state.stoppageClockActive
+        );
         const halfLabel = matchInfo.querySelector('.half-label');
         if (halfLabel) halfLabel.textContent = state.half === 1 ? '1ST HALF' : '2ND HALF';
         const badge = matchInfo.querySelector('.stoppage-badge');
@@ -426,6 +465,8 @@ window.ScoreCore = (function () {
       if (pauseBtn) pauseBtn.disabled = state.timerStatus !== 'running';
       const toggleBtn = controlsBar.querySelector('.ctrl-timer-toggle');
       if (toggleBtn) toggleBtn.classList.toggle('ctrl-timer-hidden', !state.timerVisible);
+      const addedTimeBtn = controlsBar.querySelector('.ctrl-added-time');
+      if (addedTimeBtn) addedTimeBtn.classList.toggle('ctrl-added-time-active', !!state.stoppageClockActive);
     }
 
     if (controlsBar) {
@@ -473,13 +514,17 @@ window.ScoreCore = (function () {
           state.remainingMs = config.duration * 1000;
           state.halfElapsedMs = 0;
           state.stoppageMinutes = 0;
+          state.stoppageClockActive = false;
           state.lastUpdate = now;
         } else if (action === 'add-stoppage') {
           state.stoppageMinutes += 1;
+        } else if (action === 'toggle-added-time') {
+          state.stoppageClockActive = !state.stoppageClockActive;
         } else if (action === 'next-half') {
           state.half = state.half === 1 ? 2 : 1;
           state.halfElapsedMs = 0;
           state.stoppageMinutes = 0;
+          state.stoppageClockActive = false;
           state.timerStatus = 'paused';
           state.lastUpdate = now;
         } else if (action === 'toggle-timer-visible') {

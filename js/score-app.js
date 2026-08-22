@@ -31,8 +31,8 @@
 
     timerMode: $('#timerMode'),
     halfLengthWrap: $('#halfLengthWrap'),
-    totalMatchMinutes: $('#totalMatchMinutes'),
-    halfSplitHint: $('#halfSplitHint'),
+    firstHalfMinutes: $('#firstHalfMinutes'),
+    secondHalfMinutes: $('#secondHalfMinutes'),
     durationWrap: $('#durationWrap'),
     durMinutes: $('#durMinutes'),
     durSeconds: $('#durSeconds'),
@@ -178,13 +178,6 @@
     const hasTimer = mode !== 'off';
     els.timerVisibleWrap.style.display = hasTimer ? '' : 'none';
     els.timerVisibleHint.style.display = hasTimer ? '' : 'none';
-
-    if (mode === 'football') {
-      const totalMin = parseInt(els.totalMatchMinutes.value, 10) || 90;
-      const perHalf = totalMin / 2;
-      const perHalfLabel = Number.isInteger(perHalf) ? perHalf : perHalf.toFixed(1);
-      els.halfSplitHint.textContent = `= ${perHalfLabel} minutes per half`;
-    }
   }
 
   // ---------- build params + preview ----------
@@ -222,11 +215,11 @@
         const s = parseInt(els.durSeconds.value, 10) || 0;
         params.set('duration', String(m * 60 + s));
       } else if (timerMode === 'football') {
-        // User enters the FULL match length (both halves combined); we
-        // split it evenly in half here so each half gets total/2 minutes.
-        const totalMin = parseInt(els.totalMatchMinutes.value, 10) || 90;
-        const halfSeconds = Math.round((totalMin * 60) / 2);
-        params.set('half', String(halfSeconds));
+        // Operator enters each half's length independently, in minutes.
+        const firstMin = parseInt(els.firstHalfMinutes.value, 10) || 45;
+        const secondMin = parseInt(els.secondHalfMinutes.value, 10) || 45;
+        params.set('half1', String(firstMin * 60));
+        params.set('half2', String(secondMin * 60));
       }
       if (!els.timerVisibleDefault.checked) params.set('timerVisible', '0');
     }
@@ -289,7 +282,7 @@
       els.t1LogoColor, els.t1BgColor, els.t1ScoreColor,
       els.t2Name, els.t2Score,
       els.t2LogoColor, els.t2BgColor, els.t2ScoreColor,
-      els.timerMode, els.totalMatchMinutes, els.durMinutes, els.durSeconds,
+      els.timerMode, els.firstHalfMinutes, els.secondHalfMinutes, els.durMinutes, els.durSeconds,
       els.timerVisibleDefault,
       els.scale, els.sizeControls,
       els.showControls, els.widgetId, els.customCss,
