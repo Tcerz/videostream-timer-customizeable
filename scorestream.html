@@ -140,12 +140,16 @@
 
       <div id="halfLengthWrap" class="mode-opts" style="display:none">
         <label class="field">
-          <span>Minutes per half</span>
-          <input type="number" id="halfMinutes" min="1" value="45">
+          <span>Total match length (minutes, both halves combined)</span>
+          <input type="number" id="totalMatchMinutes" min="2" step="1" value="90">
         </label>
+        <p class="strip-hint" id="halfSplitHint">= 45 minutes per half</p>
         <p class="strip-hint">
-          Each half starts at 0:00 and counts up. Past this length, the
-          clock automatically switches to "45:00+MM:SS" style. Use the +1'
+          Enter the FULL match length only (e.g. 90 for a standard match,
+          60 if your organization/league plays shorter halves) — it's
+          automatically split evenly into the two halves for you. Each
+          half starts at 0:00 and counts up; past that length, the clock
+          automatically switches to "45:00+MM:SS" style. Use the +1'
           button on the widget any time to show an announced stoppage
           badge (e.g. "+3' added") — this doesn't affect the running clock,
           it's just the on-screen announcement, same as a real broadcast.

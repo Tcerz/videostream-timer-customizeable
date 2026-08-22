@@ -31,7 +31,8 @@
 
     timerMode: $('#timerMode'),
     halfLengthWrap: $('#halfLengthWrap'),
-    halfMinutes: $('#halfMinutes'),
+    totalMatchMinutes: $('#totalMatchMinutes'),
+    halfSplitHint: $('#halfSplitHint'),
     durationWrap: $('#durationWrap'),
     durMinutes: $('#durMinutes'),
     durSeconds: $('#durSeconds'),
@@ -177,6 +178,13 @@
     const hasTimer = mode !== 'off';
     els.timerVisibleWrap.style.display = hasTimer ? '' : 'none';
     els.timerVisibleHint.style.display = hasTimer ? '' : 'none';
+
+    if (mode === 'football') {
+      const totalMin = parseInt(els.totalMatchMinutes.value, 10) || 90;
+      const perHalf = totalMin / 2;
+      const perHalfLabel = Number.isInteger(perHalf) ? perHalf : perHalf.toFixed(1);
+      els.halfSplitHint.textContent = `= ${perHalfLabel} minutes per half`;
+    }
   }
 
   // ---------- build params + preview ----------
@@ -214,8 +222,11 @@
         const s = parseInt(els.durSeconds.value, 10) || 0;
         params.set('duration', String(m * 60 + s));
       } else if (timerMode === 'football') {
-        const halfMin = parseInt(els.halfMinutes.value, 10) || 45;
-        params.set('half', String(halfMin * 60));
+        // User enters the FULL match length (both halves combined); we
+        // split it evenly in half here so each half gets total/2 minutes.
+        const totalMin = parseInt(els.totalMatchMinutes.value, 10) || 90;
+        const halfSeconds = Math.round((totalMin * 60) / 2);
+        params.set('half', String(halfSeconds));
       }
       if (!els.timerVisibleDefault.checked) params.set('timerVisible', '0');
     }
@@ -278,7 +289,7 @@
       els.t1LogoColor, els.t1BgColor, els.t1ScoreColor,
       els.t2Name, els.t2Score,
       els.t2LogoColor, els.t2BgColor, els.t2ScoreColor,
-      els.timerMode, els.halfMinutes, els.durMinutes, els.durSeconds,
+      els.timerMode, els.totalMatchMinutes, els.durMinutes, els.durSeconds,
       els.timerVisibleDefault,
       els.scale, els.sizeControls,
       els.showControls, els.widgetId, els.customCss,
