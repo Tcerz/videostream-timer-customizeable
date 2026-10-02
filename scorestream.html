@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scoreboard Widget — Easy Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+<style>
+  .team-library-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .team-library-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 12px;
+  }
+  .team-library-chip img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+  .team-library-chip button {
+    border: none; background: rgba(255,68,56,0.2); color: #FF4438;
+    width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 1; font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="index.html">&larr; Easy Overlay dashboard</a>
+</div>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="tally-strip">
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">V</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">S</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">C</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">R</span></div>
+    </div>
+    <div class="masthead-title">
+      <h1>SCOREBOARD</h1>
+      <p>Team vs. team overlay for football, futsal, basketball, or any match — with a proper match clock</p>
+    </div>
+  </div>
+  <div class="rec-indicator"><span class="rec-dot"></span> LIVE PREVIEW</div>
+</header>
+
+<main class="console">
+
+  <section class="panel controls">
+
+    <div class="strip" id="teamLibraryStrip">
+      <h2 class="strip-title">00 — Team Library <span class="optional">saves you retyping names & re-uploading logos</span></h2>
+      <p class="strip-hint">
+        Save each team here once. For the next match, just pick them from
+        the dropdowns below instead of typing the name and re-uploading
+        the logo again — handy when several teams play throughout the day.
+      </p>
+      <div id="teamLibraryList" class="team-library-list"></div>
+      <p class="strip-hint" id="teamLibraryEmptyHint">No saved teams yet — fill in Team 1 / Team 2 below, then hit "Save to library" under each.</p>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">01 — Team 1</h2>
+      <label class="field">
+        <span>Load saved team <span class="optional">optional</span></span>
+        <select id="t1LibrarySelect">
+          <option value="">— Type a new team below —</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Team name</span>
+        <input type="text" id="t1Name" value="Home">
+      </label>
+      <label class="field">
+        <span>Starting score</span>
+        <input type="number" id="t1Score" value="0" min="0">
+      </label>
+      <label class="field">
+        <span>Logo <span class="optional">optional — shows initials if skipped</span></span>
+        <input type="file" id="t1Logo" accept="image/*">
+      </label>
+      <div class="logo-preview-row" id="t1LogoPreviewRow" style="display:none">
+        <img id="t1LogoPreview" class="logo-preview-img" alt="Team 1 logo preview">
+        <button type="button" class="btn-ghost" id="t1LogoClear">Remove logo</button>
+      </div>
+      <button type="button" class="btn-ghost" id="t1SaveToLibrary" style="margin-top:10px;">&#128190; Save this team to library</button>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">02 — Team 2</h2>
+      <label class="field">
+        <span>Load saved team <span class="optional">optional</span></span>
+        <select id="t2LibrarySelect">
+          <option value="">— Type a new team below —</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Team name</span>
+        <input type="text" id="t2Name" value="Away">
+      </label>
+      <label class="field">
+        <span>Starting score</span>
+        <input type="number" id="t2Score" value="0" min="0">
+      </label>
+      <label class="field">
+        <span>Logo <span class="optional">optional — shows initials if skipped</span></span>
+        <input type="file" id="t2Logo" accept="image/*">
+      </label>
+      <div class="logo-preview-row" id="t2LogoPreviewRow" style="display:none">
+        <img id="t2LogoPreview" class="logo-preview-img" alt="Team 2 logo preview">
+        <button type="button" class="btn-ghost" id="t2LogoClear">Remove logo</button>
+      </div>
+      <button type="button" class="btn-ghost" id="t2SaveToLibrary" style="margin-top:10px;">&#128190; Save this team to library</button>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">03 — Team Colors</h2>
+      <p class="strip-hint">
+        Three independent colors per team, so the score text can never end
+        up the same color as its own background.
+      </p>
+
+      <div class="team-color-block">
+        <div class="team-color-block-title" id="t1ColorTitle">Home</div>
+        <div class="color-trio">
+          <label class="field color-field">
+            <span>Logo badge</span>
+            <input type="color" id="t1LogoColor">
+          </label>
+          <label class="field color-field">
+            <span>Background</span>
+            <input type="color" id="t1BgColor">
+          </label>
+          <label class="field color-field">
+            <span>Score text</span>
+            <input type="color" id="t1ScoreColor">
+          </label>
+        </div>
+      </div>
+
+      <div class="team-color-block">
+        <div class="team-color-block-title" id="t2ColorTitle">Away</div>
+        <div class="color-trio">
+          <label class="field color-field">
+            <span>Logo badge</span>
+            <input type="color" id="t2LogoColor">
+          </label>
+          <label class="field color-field">
+            <span>Background</span>
+            <input type="color" id="t2BgColor">
+          </label>
+          <label class="field color-field">
+            <span>Score text</span>
+            <input type="color" id="t2ScoreColor">
+          </label>
+        </div>
+      </div>
+
+      <div class="color-vs-preview" id="colorVsPreview">
+        <span class="vs-chip" id="vsChip1">Home</span>
+        <span class="vs-versus">VS</span>
+        <span class="vs-chip" id="vsChip2">Away</span>
+      </div>
+
+      <button type="button" class="btn-ghost" id="resetTeamColors" style="margin-top:12px;">Reset to template colors</button>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">04 — Match Timer <span class="optional">optional</span></h2>
+      <label class="field">
+        <span>Timer type</span>
+        <select id="timerMode">
+          <option value="off">No timer — score only</option>
+          <option value="football">Football match (2 x 45-minute halves + stoppage time)</option>
+          <option value="countup">Count up (simple stopwatch)</option>
+          <option value="countdown">Count down (e.g. basketball period clock)</option>
+        </select>
+      </label>
+
+      <div id="halfLengthWrap" class="mode-opts" style="display:none">
+        <label class="field">
+          <span>1st half length (minutes)</span>
+          <input type="number" id="firstHalfMinutes" min="1" step="1" value="45">
+        </label>
+        <label class="field">
+          <span>2nd half length (minutes)</span>
+          <input type="number" id="secondHalfMinutes" min="1" step="1" value="45">
+        </label>
+        <p class="strip-hint">
+          Set each half separately — they don't have to match (e.g. 25 for
+          the 1st half and 25 for the 2nd, or any custom split your
+          organization/league uses). Each half starts counting up and, by
+          default, freezes ("pins") at the end of that half — e.g. it
+          stops at the number you set and stays there, just minutes and
+          seconds, no "+" added. Use the stopwatch button (&#9201;) on the
+          widget any time to switch on the running "MM:SS+MM:SS"
+          added-time clock, and press it again to switch it off and pin
+          the display again. When you tap "Next half" (&#8677;), added time
+          turns off automatically and the clock continues straight from
+          the end of the 1st half instead of resetting to 0:00. The +1'
+          button is separate — it only shows an announced "+3' added"
+          badge on screen and never affects the running clock.
+        </p>
+      </div>
+
+      <div id="durationWrap" class="mode-opts" style="display:none">
+        <label class="field">
+          <span>Starting duration</span>
+          <div class="inline-fields">
+            <input type="number" id="durMinutes" min="0" value="10" placeholder="MM">
+            <input type="number" id="durSeconds" min="0" max="59" value="0" placeholder="SS">
+          </div>
+        </label>
+      </div>
+
+      <label class="checkbox" id="timerVisibleWrap" style="display:none">
+        <input type="checkbox" id="timerVisibleDefault" checked>
+        <span>Show the timer when the widget first loads</span>
+      </label>
+      <p class="strip-hint" id="timerVisibleHint" style="display:none;">
+        Either way, there's a show/hide button on the widget itself to
+        toggle it live from vMix/OBS whenever you want.
+      </p>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">05 — Style</h2>
+      <div class="template-gallery" id="templateGallery"></div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">06 — Size</h2>
+      <p class="strip-hint">
+        Text is sized relative to the browser source's own resolution, not
+        fixed pixels. Set the browser source's Width/Height to your target
+        size, then fine-tune here — it stays sharp at any size.
+      </p>
+      <label class="field">
+        <span>Base size — <span id="scaleValue">100%</span></span>
+        <input type="range" id="scale" min="0.5" max="2.5" step="0.05" value="1">
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" id="sizeControls" checked>
+        <span>Show −/⟲/+ resize buttons on the widget</span>
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">07 — Controls</h2>
+      <p class="strip-hint">
+        Adds +/− score buttons, resize buttons, a timer show/hide toggle,
+        and (for football) stoppage-time / next-half buttons directly
+        under the scoreboard — so you can run the whole match straight
+        from vMix or OBS. Enable mouse clicks on the browser source/input
+        and you're set.
+      </p>
+      <label class="checkbox">
+        <input type="checkbox" id="showControls" checked>
+        <span>Show on-widget buttons</span>
+      </label>
+      <label class="field">
+        <span>Widget ID <span class="optional">only matters if you run several scoreboards at once</span></span>
+        <input type="text" id="widgetId" value="score-1">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">08 — Match Log (MockAPI) <span class="optional">optional</span></h2>
+      <p class="strip-hint">
+        By default, clicking the 📋 button on the widget only saves the match
+        to that browser's local storage — so <code>matchlog.html</code> only
+        shows matches logged in the <em>same browser</em> (e.g. it won't see
+        matches logged inside vMix/OBS's own embedded browser). Paste a
+        <a href="https://mockapi.io" target="_blank" rel="noopener">MockAPI</a>
+        resource URL here (create a resource named <code>matchlog</code> in
+        your MockAPI project, then paste its endpoint, e.g.
+        <code>https://&lt;project-id&gt;.mockapi.io/matchlog</code>) to have
+        every logged match sent there instead — centrally, from any browser.
+      </p>
+      <label class="field">
+        <span>MockAPI endpoint URL <span class="optional">leave blank to keep using local storage only</span></span>
+        <input type="url" id="logApiUrl" placeholder="https://<project-id>.mockapi.io/matchlog">
+      </label>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">09 — Custom CSS <span class="optional">optional</span></h2>
+      <p class="strip-hint">
+        Overrides the template above. Target: <code>.scoreboard-wrap</code>,
+        <code>.team-block</code>, <code>.team-logo</code>, <code>.team-name</code>,
+        <code>.score-block</code>, <code>.team-score</code>, <code>.match-info</code>.
+      </p>
+      <textarea id="customCss" rows="6" spellcheck="false" placeholder=".team-name {
+  text-transform: uppercase;
+}"></textarea>
+    </div>
+
+  </section>
+
+  <aside class="panel output">
+    <div class="strip">
+      <h2 class="strip-title">Preview</h2>
+      <div class="preview-frame">
+        <iframe id="previewFrame" src="score.html" title="Live preview"></iframe>
+      </div>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">Browser Source URL</h2>
+      <p class="strip-hint">Copy this into OBS's Browser Source, or vMix's Web Browser input.</p>
+      <div class="url-row">
+        <input type="text" id="outputUrl" readonly>
+        <button id="copyBtn" class="btn-primary">Copy link</button>
+      </div>
+      <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
+      <p class="strip-hint" id="urlLengthHint" style="margin-top:10px; margin-bottom:0;"></p>
+    </div>
+
+    <div class="strip">
+      <h2 class="strip-title">End of day</h2>
+      <p class="strip-hint">
+        Click "&#128203; Log this result" on the widget's own control bar
+        after each match finishes — it saves that match's final score and
+        time to this browser, then clears the board for the next match.
+        Once every match of the day is logged, open the recap page below
+        to review and print everything in one go.
+      </p>
+      <a class="btn-ghost" href="matchlog.html" target="_blank" style="display:inline-block; text-decoration:none;">&#128203; Open Match Log &amp; Print</a>
+    </div>
+
+    <div class="strip howto">
+      <h2 class="strip-title">Controlling the match live</h2>
+      <div class="howto-grid">
+        <div>
+          <h3>OBS Studio</h3>
+          <ol>
+            <li>Sources → + → Browser, paste the URL</li>
+            <li>Right-click it → <strong>Interact</strong></li>
+            <li>Click any button to update live</li>
+          </ol>
+        </div>
+        <div>
+          <h3>vMix</h3>
+          <ol>
+            <li>Add Input → Web Browser, paste the URL</li>
+            <li>Right-click → enable mouse/keyboard input</li>
+            <li>Click any button to update live</li>
+          </ol>
+        </div>
+      </div>
+      <p class="strip-hint" style="margin-top:14px;">
+        Score, timer, half, stoppage time, size, and show/hide state are
+        all remembered by the browser the widget runs in — reloading that
+        browser source resumes right where you left off.
+      </p>
+    </div>
+  </aside>
+
+</main>
+
+<script src="js/score-templates.js"></script>
+<script src="js/score-core.js"></script>
+<script src="js/score-app.js"></script>
+</body>
+</html>

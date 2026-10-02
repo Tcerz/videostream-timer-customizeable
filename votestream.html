@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Live Voting Widget — Easy Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/console.css">
+<style>
+  .full { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel-raised); color: var(--text); font: inherit; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .status { font-size: 12px; margin-top: 8px; color: var(--text-dim); } .status.ok { color: var(--green); } .status.err { color: var(--red); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chips label { display: flex; align-items: center; gap: 6px; font-size: 12px; background: var(--panel-raised); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+  .candrow { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 13px; } .candrow input { width: 36px; height: 26px; border: none; background: none; padding: 0; }
+  .hdrmap { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 8px; word-break: break-word; }
+  .types { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } .types button.on { border-color: var(--green); color: var(--green); }
+</style>
+</head>
+<body>
+<div class="breadcrumb"><a href="index.html">&larr; Easy Overlay dashboard</a></div>
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="tally-strip">
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">L</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">I</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">V</span></div>
+      <div class="tally-lamp on"><span class="dot"></span><span class="lamp-label">E</span></div>
+    </div>
+    <div class="masthead-title"><h1>LIVE VOTING</h1><p>Hasil voting dari Google Sheets / Google Form tampil real-time di overlay</p></div>
+  </div>
+  <div class="rec-indicator"><span class="rec-dot"></span> LIVE PREVIEW</div>
+</header>
+
+<main class="console">
+<section class="panel controls">
+
+  <div class="strip">
+    <h2 class="strip-title">01 — Sumber data</h2>
+    <p class="strip-hint">Tempel link Google Sheets (hasil Google Form). Akses sheet harus <b>Anyone with the link → Viewer</b>. File .xlsx yang diupload ke Drive perlu dibuka lalu <i>File → Save as Google Sheets</i>.</p>
+    <input class="full" type="url" id="src" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing">
+    <div style="margin-top:10px"><button class="btn-primary" id="loadBtn">Muat &amp; deteksi kolom</button></div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="strip">
+    <h2 class="strip-title">02 — Kolom terdeteksi</h2>
+    <p class="strip-hint">Otomatis dari header. Bisa diubah manual bila salah.</p>
+    <div class="grid2">
+      <label class="field"><span>Kolom Nama</span><select id="nm" class="full"></select></label>
+      <label class="field"><span>Kolom Pilihan (dihitung)</span><select id="ch" class="full"></select></label>
+      <label class="field"><span>Kolom Status</span><select id="st" class="full"></select></label>
+    </div>
+    <div id="okWrap" style="display:none"><span class="strip-hint">Hitung hanya baris dengan status:</span><div class="chips" id="okChips"></div></div>
+    <div class="field-toggles" style="margin-top:10px"><label><input type="checkbox" id="uniq"> Satu suara per nama (yang terakhir dipakai)</label></div>
+    <div class="hdrmap" id="hdrmap"></div>
+  </div>
+
+  <div class="strip">
+    <h2 class="strip-title">03 — Tampilan hasil</h2>
+    <div class="types" id="types">
+      <button class="btn-ghost on" data-t="bar">Bar</button><button class="btn-ghost" data-t="column">Kolom</button>
+      <button class="btn-ghost" data-t="pie">Pie</button><button class="btn-ghost" data-t="donut">Donut</button><button class="btn-ghost" data-t="number">Angka</button>
+    </div>
+    <label class="field" style="margin-top:12px"><span>Judul</span><input class="full" id="title" value="Pemilihan Ketua Umum"></label>
+    <div class="grid2">
+      <label class="field"><span>Urutan</span><select id="sort" class="full"><option value="votes">Suara terbanyak</option><option value="name">Nama A–Z</option><option value="none">Urutan sheet</option></select></label>
+      <label class="field"><span>Latar</span><select id="bg" class="full"><option value="">Transparan</option><option value="card">Panel gelap</option><option value="light">Putih</option></select></label>
+      <label class="field"><span>Refresh (detik)</span><input class="full" type="number" id="poll" value="5" min="2" max="60"></label>
+      <label class="field"><span>Ukuran (scale)</span><input class="full" type="number" id="scale" value="1" min="0.3" max="3" step="0.1"></label>
+    </div>
+    <div class="field-toggles" style="margin-top:10px">
+      <label><input type="checkbox" id="pct" checked> Tampilkan persen</label>
+      <label><input type="checkbox" id="total" checked> Tampilkan total suara</label>
+      <label><input type="checkbox" id="hide"> <b>Sembunyikan nama</b> (hanya diagram &amp; jumlah)</label>
+    </div>
+    <label class="field" id="recentWrap"><span>Daftar pemilih terbaru (0 = mati)</span><input class="full" type="number" id="recent" value="0" min="0" max="10"></label>
+    <h3 class="strip-hint" style="margin:14px 0 0">Warna kandidat</h3><div id="cands"><span class="strip-hint">Muat data dulu untuk mengatur warna.</span></div>
+  </div>
+</section>
+
+<section class="panel output">
+  <div class="strip"><h2 class="strip-title">Preview</h2><div class="preview-frame"><iframe id="previewFrame" src="vote.html" title="Live preview"></iframe></div></div>
+  <div class="strip">
+    <h2 class="strip-title">Browser Source URL</h2>
+    <p class="strip-hint">Salin ke OBS Browser Source atau vMix Web Browser. Angka naik otomatis saat ada suara masuk.</p>
+    <div class="url-row"><input type="text" id="outputUrl" readonly><button id="copyBtn" class="btn-primary">Copy link</button></div>
+    <span class="copy-confirm" id="copyConfirm">Copied to clipboard</span>
+  </div>
+</section>
+</main>
+
+<script src="js/vote-core.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let sheet = null, type = 'bar', colors = [], labels = [];
+const opt = (sel, list, val, none) => { sel.innerHTML = (none ? '<option value="">— tidak ada —</option>' : '') + list.map((h, i) => '<option value="' + i + '">' + h.replace(/</g, '&lt;') + '</option>').join(''); if (val >= 0) sel.value = val; };
+
+function renderStatusChips() {
+  const i = $('st').value; const w = $('okWrap');
+  if (i === '' || !sheet) { w.style.display = 'none'; $('okChips').innerHTML = ''; return; }
+  const vals = [...new Set(sheet.rows.map(r => (r[i] || '').trim()).filter(Boolean))];
+  w.style.display = vals.length ? '' : 'none';
+  $('okChips').innerHTML = vals.map(v => '<label><input type="checkbox" class="okc" value="' + v.replace(/"/g, '&quot;') + '" checked> ' + v.replace(/</g, '&lt;') + '</label>').join('');
+  document.querySelectorAll('.okc').forEach(c => c.onchange = build);
+}
+function renderCands() {
+  if (!sheet || $('ch').value === '') return;
+  const t = VoteCore.tally(sheet, { ch: sheet.headers[$('ch').value] }, {});
+  labels = t.items.map(i => i.label).sort((a, b) => a.localeCompare(b));
+  $('cands').innerHTML = labels.length ? labels.map((l, i) => '<div class="candrow"><input type="color" data-i="' + i + '" value="' + (colors[i] || VoteCore.PALETTE[i % 8]) + '"> ' + l.replace(/</g, '&lt;') + '</div>').join('') : '<span class="strip-hint">Belum ada suara — warna default dipakai.</span>';
+  document.querySelectorAll('#cands input').forEach(c => c.oninput = () => { colors[c.dataset.i] = c.value; build(); });
+}
+
+async function load() {
+  $('status').className = 'status'; $('status').textContent = 'Memuat…';
+  try {
+    sheet = await VoteCore.fetchSheet($('src').value.trim());
+    const m = VoteCore.detect(sheet.headers);
+    opt($('nm'), sheet.headers, m.nm, true); opt($('ch'), sheet.headers, m.ch, false); opt($('st'), sheet.headers, m.st, true);
+    $('hdrmap').textContent = 'Header: ' + sheet.headers.join(' | ');
+    $('status').className = 'status ok'; $('status').textContent = '✓ ' + sheet.rows.length + ' respon, ' + sheet.headers.length + ' kolom terbaca';
+    renderStatusChips(); renderCands(); build();
+  } catch (e) { $('status').className = 'status err'; $('status').textContent = e.message; }
+}
+
+function build() {
+  const P = new URLSearchParams(); const v = id => $(id).value;
+  if (!$('src').value.trim()) { $('outputUrl').value = ''; return; }
+  P.set('src', v('src').trim());
+  if (sheet) {
+    if (v('nm') !== '') P.set('nm', sheet.headers[v('nm')]); else P.set('nm', '');
+    if (v('ch') !== '') P.set('ch', sheet.headers[v('ch')]);
+    if (v('st') !== '') {
+      P.set('st', sheet.headers[v('st')]);
+      const all = [...document.querySelectorAll('.okc')], on = all.filter(c => c.checked);
+      if (on.length && on.length < all.length) P.set('ok', on.map(c => c.value).join('|'));
+    } else P.set('st', '');
+  }
+  P.set('type', type); if (v('title')) P.set('title', v('title'));
+  if (v('sort') !== 'votes') P.set('sort', v('sort')); if (v('bg')) P.set('bg', v('bg'));
+  if (v('poll') !== '5') P.set('poll', v('poll')); if (v('scale') !== '1') P.set('scale', v('scale'));
+  if (!$('pct').checked) P.set('pct', '0'); if (!$('total').checked) P.set('total', '0');
+  if ($('uniq').checked) P.set('uniq', '1');
+  if ($('hide').checked) P.set('hide', '1'); else if (+v('recent') > 0) P.set('recent', v('recent'));
+  $('recentWrap').style.display = $('hide').checked ? 'none' : '';
+  if (colors.some(Boolean)) P.set('c', labels.map((_, i) => (colors[i] || VoteCore.PALETTE[i % 8]).replace('#', '')).join(','));
+  const url = new URL('vote.html', location.href); url.search = P.toString();
+  $('outputUrl').value = url.href; $('previewFrame').src = url.href;
+}
+
+$('loadBtn').onclick = load;
+$('st').onchange = () => { renderStatusChips(); build(); };
+$('ch').onchange = () => { renderCands(); build(); };
+['nm', 'sort', 'bg', 'pct', 'total', 'hide', 'uniq'].forEach(id => $(id).onchange = build);
+['title', 'poll', 'scale', 'recent'].forEach(id => $(id).oninput = build);
+document.querySelectorAll('#types button').forEach(b => b.onclick = () => { type = b.dataset.t; document.querySelectorAll('#types button').forEach(x => x.classList.toggle('on', x === b)); build(); });
+$('copyBtn').onclick = () => { navigator.clipboard.writeText($('outputUrl').value); $('copyConfirm').classList.add('show'); setTimeout(() => $('copyConfirm').classList.remove('show'), 1500); };
+</script>
+</body>
+</html>

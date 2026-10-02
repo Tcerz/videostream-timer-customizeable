@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Live Voting Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+  #app { --fg: #fff; --card: transparent; --track: rgba(255,255,255,.14); --hole: #14171B;
+    font-size: calc(var(--s, 1) * 2.1vmin); color: var(--fg); box-sizing: border-box; height: 100%; padding: 2em; display: flex; flex-direction: column; gap: .8em; }
+  #app.card { --card: rgba(11,13,16,.88); background: var(--card); }
+  #app.light { --fg: #111; --track: rgba(0,0,0,.12); --hole: #fff; background: #fff; }
+  .v-title { font-size: 1.6em; font-weight: 800; text-align: center; letter-spacing: .02em; }
+  .v-chart { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+  .v-total { text-align: center; opacity: .8; } .v-total b { font-size: 1.2em; }
+  .v-empty { text-align: center; opacity: .6; }
+  small { opacity: .7; font-weight: 400; margin-left: .3em; }
+  .v-bars { display: flex; flex-direction: column; gap: .8em; }
+  .v-rtop { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: .25em; } .v-rtop b { font-size: 1.15em; }
+  .v-track { height: 1.4em; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .v-fill { height: 100%; border-radius: 999px; }
+  .v-cols { display: flex; gap: 1em; height: 100%; align-items: stretch; justify-content: center; }
+  .v-col { flex: 1; max-width: 12em; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; text-align: center; }
+  .v-cnum { font-weight: 800; font-size: 1.4em; } .v-cbar { border-radius: .4em .4em 0 0; min-height: 2px; margin-top: .3em; }
+  .v-clab { margin-top: .4em; font-weight: 600; }
+  .v-pie { display: flex; align-items: center; justify-content: center; gap: 2em; }
+  .v-pie svg { height: 24em; max-height: 60vmin; } .v-hole { fill: var(--hole); }
+  .v-dtot { font-size: 30px; font-weight: 800; fill: var(--fg); } .v-dsub { font-size: 11px; fill: var(--fg); opacity: .7; }
+  .v-legend { display: flex; flex-direction: column; gap: .5em; min-width: 12em; }
+  .v-li { display: flex; align-items: center; gap: .6em; } .v-li i { width: 1em; height: 1em; border-radius: 3px; } .v-li span { flex: 1; } 
+  .v-nums { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
+  .v-ncard { border: .2em solid; border-radius: .8em; padding: .6em 1.2em; text-align: center; min-width: 8em; background: rgba(255,255,255,.04); }
+  .v-nbig { font-size: 4em; font-weight: 800; line-height: 1; } .v-nlab { font-weight: 600; }
+  .v-recent { font-size: .8em; border-top: 1px solid var(--track); padding-top: .5em; }
+  .v-rh { opacity: .6; text-transform: uppercase; letter-spacing: .1em; font-size: .8em; }
+  .v-rv { display: flex; justify-content: space-between; gap: 1em; } .v-rv em { font-style: normal; opacity: .75; }
+  .v-err { position: fixed; right: .6em; bottom: .4em; font-size: .6em; color: #FFB020; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="js/vote-core.js"></script>
+<script>
+(function () {
+  const p = new URLSearchParams(location.search), app = document.getElementById('app');
+  const num = (k, d) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d : v; };
+  app.className = p.get('bg') || '';
+  app.style.setProperty('--s', num('scale', 1));
+  const o = {
+    type: p.get('type') || 'bar', hide: p.get('hide') === '1', title: p.get('title') || '',
+    pct: p.get('pct') !== '0', sort: p.get('sort') || 'votes', recent: num('recent', 0),
+    total: p.get('total') !== '0', colors: (p.get('c') || '').split(',').filter(Boolean).map(c => '#' + c.replace('#', ''))
+  };
+  const map = { nm: p.get('nm'), ch: p.get('ch'), st: p.get('st') };
+  const ok = (p.get('ok') || '').split('|').filter(Boolean);
+  const view = VoteCore.mount(app, o);
+  let last = null;
+  async function poll() {
+    if (!p.get('src')) { view.error('Parameter src (link Google Sheets) belum diisi'); return; }
+    try {
+      const sheet = await VoteCore.fetchSheet(p.get('src'), p.get('gid'));
+      const m = Object.assign(VoteCore.detect(sheet.headers), {});
+      const use = {
+        nm: map.nm != null ? map.nm : sheet.headers[m.nm], st: map.st != null ? map.st : sheet.headers[m.st], ch: map.ch != null ? map.ch : sheet.headers[m.ch]
+      };
+      view.update(VoteCore.tally(sheet, use, { ok, uniq: p.get('uniq') === '1' }));
+    } catch (e) { view.error(e.message); }
+  }
+  view.update({ items: [], total: 0, voters: [] });
+  poll(); setInterval(poll, Math.max(2, num('poll', 5)) * 1000);
+})();
+</script>
+</body>
+</html>

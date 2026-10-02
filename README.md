@@ -171,6 +171,8 @@ timerstream.html          Timer & Clock builder UI
 widget.html                Timer & Clock overlay you paste into OBS/vMix
 beatstream.html            Beat Pulse builder UI
 beat.html                    Beat Pulse overlay you paste into OBS/vMix
+scorestream.html            Scoreboard builder UI
+score.html                    Scoreboard overlay you paste into OBS/vMix
 css/console.css               shared styles (dashboard + all builder pages)
 js/templates.js                the 12 built-in Timer & Clock templates
 js/timer-core.js                Timer & Clock engine (param parsing, time math, render)
@@ -178,6 +180,9 @@ js/app.js                        timerstream.html logic (live preview + link gen
 js/beat-presets.js                Beat Pulse color mood presets
 js/beat-core.js                    Beat Pulse engine (audio analysis, beat detection, render)
 js/beat-app.js                      beatstream.html logic (live preview + link generation)
+js/score-templates.js                the 6 built-in Scoreboard layouts
+js/score-core.js                      Scoreboard engine (score/timer state, on-widget controls)
+js/score-app.js                        scorestream.html logic (logo upload, live preview, link generation)
 ```
 
 Adding a new widget later means: a new `<widget>stream.html` builder page, a
@@ -233,3 +238,144 @@ newer CEF versions support it better).
 | `ambient` | `0`–`100` | baseline brightness with no beat, default `35` |
 | `pulse` | `0`–`100` | how strong each beat's bump is, default `70` |
 | `id` | text | remembers the chosen input device separately per widget, default `beat` |
+
+---
+
+# Scoreboard — team vs. team overlay with a match clock
+
+`scorestream.html` (builder) and `score.html` (overlay) — a two-team score
+display with logos, a live score, and an optional match clock, laid out
+like a real broadcast scoreboard. Built for football/futsal, basketball, or
+any versus-style match.
+
+## Layout
+
+```
+[logo] Team 1 name    score1 - score2    Team 2 name [logo]
+[                    match clock                        ]   (optional, toggleable)
+```
+
+If you don't upload a logo for a team, it shows a colored circle with that
+team's initials instead — so it still looks finished without any image.
+
+## Team colors
+
+Each team has three independent colors, so you're never stuck with the
+score text becoming invisible against its own background:
+
+- **Logo badge** — background of the initials circle (when no logo image is set)
+- **Background** — that team's half of the scoreboard bar
+- **Score text** — color of that team's score number
+
+Pick a template first for a matching starting palette, then adjust any of
+the six colors freely; "Reset to template colors" puts it back.
+
+## Football match clock (2 halves + stoppage time)
+
+A real football/soccer match is 90 minutes, played as two 45-minute
+halves, with a variable amount of stoppage time added at the referee's
+discretion at the end of each half. Selecting **"Football match"** as the
+timer type gives you exactly that:
+
+- Each half is its own stopwatch, starting at 0:00.
+- Minutes per half is configurable (default 45).
+- Once a half passes its configured length, the clock automatically
+  switches to broadcast-style display, e.g. `45:00+01:12`.
+- The **+1′** button on the widget lets you announce stoppage time live
+  (shows a small "+3′ added" badge) — same as a real broadcast graphic,
+  independent of the running clock itself.
+- The **⇥** (next half) button ends the current half and starts the next
+  one, resetting the clock and stoppage badge; pressing it again after the
+  2nd half cycles back to the 1st half, ready for the next match.
+
+The other timer types (simple stopwatch, or a countdown for basketball-style
+period clocks) are still available if football's specific 2-half format
+isn't what you need.
+
+## Showing/hiding the clock live
+
+The match clock has its own show/hide toggle button (the eye icon) right
+on the widget — click it to hide the clock under the scoreboard (e.g.
+between matches or during a break) without hiding the score. It's
+controllable the same way as everything else: enable mouse input on the
+browser source and click it directly from vMix/OBS.
+
+## Resizing without it turning pixelated
+
+Same approach as the Timer & Clock widget: all sizing is in `vmin` rather
+than fixed pixels, with on-widget **−/⟲/+** buttons. Set the browser
+source's own Width/Height to the size you actually need, then fine-tune
+with the resize buttons — it stays sharp at any size because it re-renders,
+rather than being stretched from a smaller image.
+
+## Controlling everything live from vMix/OBS
+
+Same approach as the Timer widget's Play/Pause/Reset — one control bar
+under the scoreboard with:
+
+- **+ / −** per team to update the score
+- **⟲** to reset both scores
+- **−/⟲/+** to resize the whole scoreboard
+- **▶ / ❚❚ / ⟲** to play/pause/reset the match clock (if a timer is enabled)
+- **+1′** and **⇥** for football's stoppage time / next half (football mode only)
+- **👁** to show/hide the clock
+
+1. Leave **"Show on-widget buttons"** checked in the builder.
+2. In vMix: right-click the Web Browser input → enable mouse/keyboard
+   input. In OBS: right-click the Browser source → **Interact**.
+3. Click any button to update live.
+
+Score, clock, half, stoppage time, size, and show/hide state are all
+remembered by the browser the widget runs in, so reloading that browser
+source resumes right where you left off — no need to reopen the builder
+mid-match.
+
+## About the logo upload
+
+Logos are embedded directly into the widget link (as a compressed,
+resized image) rather than uploaded to a server — this keeps the project
+server-less, and the same "copy one link, paste into vMix/OBS" workflow
+works for a scoreboard with logos as it does for every other widget here.
+The builder automatically resizes any uploaded image to a small size
+before encoding it, to keep the link a reasonable length. If your link
+ends up very long (the builder will warn you), try a smaller or simpler
+source image.
+
+## URL parameters (score.html)
+
+| Param | Values | Notes |
+|---|---|---|
+| `t1`, `t2` | text | team names, default `Team 1` / `Team 2` |
+| `s1`, `s2` | number | starting score, default `0` |
+| `logo1`, `logo2` | data URI | team logo image, built automatically by the builder |
+| `t1logo`, `t1bg`, `t1score` | hex color | team 1's logo badge / background / score text colors |
+| `t2logo`, `t2bg`, `t2score` | hex color | team 2's logo badge / background / score text colors |
+| `template` | `1`–`6` | built-in layout, see below |
+| `css` | base64 text | custom CSS, applied after the template |
+| `scale` | number | size multiplier, e.g. `0.5`–`3`, default `1` |
+| `sizeControls` | `0` | hide the on-widget −/⟲/+ resize buttons |
+| `timer` | `off` \| `football` \| `countup` \| `countdown` | default `off` |
+| `duration` | seconds | starting time for `timer=countdown` |
+| `half` | seconds | length of each half for `timer=football`, default `2700` (45 min) |
+| `timerVisible` | `0` | start with the clock hidden (still toggleable live either way) |
+| `controls` | `0` | hide all on-widget buttons |
+| `id` | text | widget instance name, keeps multiple scoreboards' state separate (default `score`) |
+
+## Templates
+
+6 built-in layouts: Broadcast Bar, Box Score, Minimal Clean, Esports Neon,
+Football Classic, and Basketball Bold.
+
+---
+
+# Live Voting — hasil voting real-time dari Google Sheets
+
+`votestream.html` (builder), `vote.html` (overlay), `js/vote-core.js` (engine).
+
+1. Buka builder, tempel link Google Sheets hasil Google Form (akses **Anyone with the link → Viewer**).
+2. Klik **Muat & deteksi kolom** — header dibaca otomatis (awalan nomor seperti `1.` diabaikan): kolom Nama, Status, dan Pilihan terdeteksi, bisa diubah manual.
+3. Pilih tampilan: Bar, Kolom, Pie, Donut, atau Angka. Opsi: filter status, satu suara per nama, persen, total, warna kandidat.
+4. **Sembunyikan nama** menghilangkan semua nama pemilih; hanya diagram dan jumlah suara yang tampil.
+5. Salin link ke OBS/vMix. Overlay membaca sheet tiap N detik dan angkanya naik dengan animasi.
+
+Parameter `vote.html`: `src`, `gid`, `nm`, `ch`, `st` (nama header), `ok` (status dihitung, dipisah `|`), `uniq`, `type` (`bar|column|pie|donut|number`), `title`, `sort` (`votes|name|none`), `pct`, `total`, `hide`, `recent`, `bg` (`card|light`), `scale`, `poll`, `c` (warna hex dipisah koma).
